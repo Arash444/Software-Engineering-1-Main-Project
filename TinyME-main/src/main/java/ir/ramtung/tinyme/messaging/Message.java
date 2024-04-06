@@ -17,4 +17,6 @@ public class Message {
     public static final String PRICE_NOT_MULTIPLE_OF_TICK_SIZE = "Price is not a multiple of security tick size";
     public static final String SELLER_HAS_NOT_ENOUGH_POSITIONS = "Seller has not enough positions";
     public static final String CANNOT_CHANGE_MIN_EXE_QUANTITY = "Cannot change minimum execution quantity";
+    public static final String NOT_ENOUGH_TRADED_QUANTITY = "Not enough traded quantity";
+
 }
