@@ -37,16 +37,16 @@ class SecurityTest {
         shareholder = Shareholder.builder().shareholderId(0).build();
         shareholder.incPosition(security, 100_000);
         orders = Arrays.asList(
-                new Order(1, security, BUY, 304, 15700, broker, shareholder),
-                new Order(2, security, BUY, 43, 15500, broker, shareholder),
-                new Order(3, security, BUY, 445, 15450, broker, shareholder),
-                new Order(4, security, BUY, 526, 15450, broker, shareholder),
-                new Order(5, security, BUY, 1000, 15400, broker, shareholder),
-                new Order(6, security, Side.SELL, 350, 15800, broker, shareholder),
-                new Order(7, security, Side.SELL, 285, 15810, broker, shareholder),
-                new Order(8, security, Side.SELL, 800, 15810, broker, shareholder),
-                new Order(9, security, Side.SELL, 340, 15820, broker, shareholder),
-                new Order(10, security, Side.SELL, 65, 15820, broker, shareholder)
+                new Order(1, security, BUY, 304, 15700, broker, shareholder, 0),
+                new Order(2, security, BUY, 43, 15500, broker, shareholder, 0),
+                new Order(3, security, BUY, 445, 15450, broker, shareholder, 0),
+                new Order(4, security, BUY, 526, 15450, broker, shareholder, 0),
+                new Order(5, security, BUY, 1000, 15400, broker, shareholder, 0),
+                new Order(6, security, Side.SELL, 350, 15800, broker, shareholder, 0),
+                new Order(7, security, Side.SELL, 285, 15810, broker, shareholder, 0),
+                new Order(8, security, Side.SELL, 800, 15810, broker, shareholder, 0),
+                new Order(9, security, Side.SELL, 340, 15820, broker, shareholder, 0),
+                new Order(10, security, Side.SELL, 65, 15820, broker, shareholder, 0)
         );
         orders.forEach(order -> security.getOrderBook().enqueue(order));
     }
@@ -110,11 +110,11 @@ class SecurityTest {
         security = Security.builder().build();
         broker = Broker.builder().credit(1_000_000L).build();
         orders = Arrays.asList(
-                new Order(1, security, BUY, 304, 15700, broker, shareholder),
-                new Order(2, security, BUY, 43, 15500, broker, shareholder),
-                new IcebergOrder(3, security, BUY, 445, 15450, broker, shareholder, 100),
-                new Order(4, security, BUY, 526, 15450, broker, shareholder),
-                new Order(5, security, BUY, 1000, 15400, broker, shareholder)
+                new Order(1, security, BUY, 304, 15700, broker, shareholder, 0),
+                new Order(2, security, BUY, 43, 15500, broker, shareholder, 0),
+                new IcebergOrder(3, security, BUY, 445, 15450, broker, shareholder, 100, 0),
+                new Order(4, security, BUY, 526, 15450, broker, shareholder, 0),
+                new Order(5, security, BUY, 1000, 15400, broker, shareholder, 0)
         );
         orders.forEach(order -> security.getOrderBook().enqueue(order));
         EnterOrderRq updateOrderRq = EnterOrderRq.createUpdateOrderRq(1, security.getIsin(), 3, LocalDateTime.now(), BUY, 445, 15450, 0, 0, 150, 0);
@@ -128,11 +128,11 @@ class SecurityTest {
         security = Security.builder().build();
         broker = Broker.builder().build();
         orders = Arrays.asList(
-                new Order(1, security, BUY, 304, 15700, broker, shareholder),
-                new Order(2, security, BUY, 43, 15500, broker, shareholder),
-                new IcebergOrder(3, security, BUY, 445, 15450, broker, shareholder, 100),
-                new Order(4, security, BUY, 526, 15450, broker, shareholder),
-                new Order(5, security, BUY, 1000, 15400, broker, shareholder)
+                new Order(1, security, BUY, 304, 15700, broker, shareholder, 0),
+                new Order(2, security, BUY, 43, 15500, broker, shareholder, 0),
+                new IcebergOrder(3, security, BUY, 445, 15450, broker, shareholder, 100, 0),
+                new Order(4, security, BUY, 526, 15450, broker, shareholder, 0),
+                new Order(5, security, BUY, 1000, 15400, broker, shareholder, 0)
         );
         orders.forEach(order -> security.getOrderBook().enqueue(order));
         EnterOrderRq updateOrderRq = EnterOrderRq.createUpdateOrderRq(1, security.getIsin(), 3, LocalDateTime.now(), BUY, 300, 15450, 0, 0, 100, 0);
@@ -146,7 +146,7 @@ class SecurityTest {
         broker = Broker.builder().brokerId(1).credit(100).build();
 
         security.getOrderBook().enqueue(
-                new IcebergOrder(1, security, BUY, 100, 9, broker, shareholder, 10)
+                new IcebergOrder(1, security, BUY, 100, 9, broker, shareholder, 10, 0)
         );
 
         EnterOrderRq updateReq = EnterOrderRq.createUpdateOrderRq(2, security.getIsin(), 1, LocalDateTime.now(), BUY, 100, 10, 0, 0, 10, 0);
@@ -160,7 +160,7 @@ class SecurityTest {
     void update_iceberg_order_decrease_peak_size() {
         security = Security.builder().isin("TEST").build();
         security.getOrderBook().enqueue(
-                new IcebergOrder(1, security, BUY, 20, 10, broker, shareholder, 10)
+                new IcebergOrder(1, security, BUY, 20, 10, broker, shareholder, 10, 0)
         );
 
         EnterOrderRq updateReq = EnterOrderRq.createUpdateOrderRq(2, security.getIsin(), 1, LocalDateTime.now(), BUY, 20, 10, 0, 0, 5, 0);
@@ -174,10 +174,10 @@ class SecurityTest {
         security = Security.builder().isin("TEST").build();
         shareholder.incPosition(security, 1_000);
         orders = List.of(
-                new Order(1, security, BUY, 15, 10, broker, shareholder),
-                new Order(2, security, BUY, 20, 10, broker, shareholder),
-                new Order(3, security, BUY, 40, 10, broker, shareholder),
-                new IcebergOrder(4, security, SELL, 30, 12, broker, shareholder, 10)
+                new Order(1, security, BUY, 15, 10, broker, shareholder, 0),
+                new Order(2, security, BUY, 20, 10, broker, shareholder, 0),
+                new Order(3, security, BUY, 40, 10, broker, shareholder, 0),
+                new IcebergOrder(4, security, SELL, 30, 12, broker, shareholder, 10, 0)
         );
         orders.forEach(order -> security.getOrderBook().enqueue(order));
 
