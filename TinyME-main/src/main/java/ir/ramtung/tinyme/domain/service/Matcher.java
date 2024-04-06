@@ -74,7 +74,7 @@ public class Matcher {
         if (result.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT)
             return result;
 
-        int total_traded_quantity = result.remainder().getQuantity();
+        int total_traded_quantity = result.trades().stream().mapToInt(Trade::getQuantity).sum();
         if (total_traded_quantity >= order.getMinimumExecutionQuantity() && total_traded_quantity != 0) {
             if (order.getSide() == Side.BUY) {
                 if (!order.getBroker().hasEnoughCredit(order.getValue())) {
