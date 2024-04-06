@@ -4,6 +4,8 @@ public class Message {
     public static final String INVALID_ORDER_ID = "Invalid order ID";
     public static final String ORDER_QUANTITY_NOT_POSITIVE = "Order quantity is not-positive";
     public static final String ORDER_PRICE_NOT_POSITIVE = "Order price is not-positive";
+    public static final String ORDER_MIN_EXE_QUANTITY_NOT_POSITIVE = "Order minimum execution quantity is non-positive";
+    public static final String ORDER_MIN_EXE_QUANTITY_MORE_THAN_TOTAL_QUANTITY = "Order minimun execution is more than total quantity";
     public static final String UNKNOWN_SECURITY_ISIN = "Unknown security ISIN";
     public static final String ORDER_ID_NOT_FOUND = "Order ID not found in the order book";
     public static final String INVALID_PEAK_SIZE = "Iceberg order peak size is out of range";
