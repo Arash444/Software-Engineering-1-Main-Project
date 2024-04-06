@@ -139,7 +139,8 @@ public class OrderHandlerTest {
 
     @Test
     void invalid_new_order_with_multiple_errors() {
-        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "XXX", -1, LocalDateTime.now(), Side.SELL, 0, 0, -1, -1, 0, 0));
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "XXX", -1,
+                LocalDateTime.now(), Side.SELL, -2, 0, -1, -1, 0, -1));
         ArgumentCaptor<OrderRejectedEvent> orderRejectedCaptor = ArgumentCaptor.forClass(OrderRejectedEvent.class);
         verify(eventPublisher).publish(orderRejectedCaptor.capture());
         OrderRejectedEvent outputEvent = orderRejectedCaptor.getValue();
@@ -151,7 +152,9 @@ public class OrderHandlerTest {
                 Message.ORDER_QUANTITY_NOT_POSITIVE,
                 Message.INVALID_PEAK_SIZE,
                 Message.UNKNOWN_BROKER_ID,
-                Message.UNKNOWN_SHAREHOLDER_ID
+                Message.UNKNOWN_SHAREHOLDER_ID,
+                Message.ORDER_MIN_EXE_QUANTITY_NOT_POSITIVE,
+                Message.ORDER_MIN_EXE_QUANTITY_MORE_THAN_TOTAL_QUANTITY
         );
     }
 
@@ -201,7 +204,8 @@ public class OrderHandlerTest {
 
     @Test
     void invalid_update_with_multiple_errors() {
-        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "XXX", -1, LocalDateTime.now(), Side.SELL, 0, 0, -1, shareholder.getShareholderId(), 0, 0));
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "XXX", -1, LocalDateTime.now(),
+                Side.SELL, -2, 0, -1, shareholder.getShareholderId(), 0, -1));
         ArgumentCaptor<OrderRejectedEvent> orderRejectedCaptor = ArgumentCaptor.forClass(OrderRejectedEvent.class);
         verify(eventPublisher).publish(orderRejectedCaptor.capture());
         OrderRejectedEvent outputEvent = orderRejectedCaptor.getValue();
@@ -212,7 +216,9 @@ public class OrderHandlerTest {
                 Message.INVALID_ORDER_ID,
                 Message.ORDER_PRICE_NOT_POSITIVE,
                 Message.ORDER_QUANTITY_NOT_POSITIVE,
-                Message.INVALID_PEAK_SIZE
+                Message.INVALID_PEAK_SIZE,
+                Message.ORDER_MIN_EXE_QUANTITY_NOT_POSITIVE,
+                Message.ORDER_MIN_EXE_QUANTITY_MORE_THAN_TOTAL_QUANTITY
         );
     }
 
@@ -559,5 +565,21 @@ public class OrderHandlerTest {
         assertThat(shareholder1.hasEnoughPositionsOn(security, 100_000)).isTrue();
         assertThat(shareholder.hasEnoughPositionsOn(security, 500)).isTrue();
     }
+    @Test
+    void invalid_update_changing_min_exe_quantity() {
+        Order beforeUpdate = new Order(1, security, Side.BUY, 500, 15450,
+                broker1, shareholder, 0);
+        security.getOrderBook().enqueue(beforeUpdate);
 
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "ABC", 1,
+                LocalDateTime.now(), Side.BUY, 500, 15450, broker1.getBrokerId(),
+                shareholder.getShareholderId(), 0, 100));
+
+        ArgumentCaptor<OrderRejectedEvent> orderRejectedCaptor = ArgumentCaptor.forClass(OrderRejectedEvent.class);
+        verify(eventPublisher).publish(orderRejectedCaptor.capture());
+        OrderRejectedEvent outputEvent = orderRejectedCaptor.getValue();
+        assertThat(outputEvent.getErrors()).containsOnly(
+                Message.CANNOT_CHANGE_MIN_EXE_QUANTITY
+        );
+    }
 }
