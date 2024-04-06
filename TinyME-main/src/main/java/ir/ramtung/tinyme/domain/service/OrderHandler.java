@@ -91,7 +91,7 @@ public class OrderHandler {
             errors.add(Message.ORDER_QUANTITY_NOT_POSITIVE);
         if (enterOrderRq.getPrice() <= 0)
             errors.add(Message.ORDER_PRICE_NOT_POSITIVE);
-        if (enterOrderRq.getMinimumExecutionQuantity() <= 0)
+        if (enterOrderRq.getMinimumExecutionQuantity() < 0)
             errors.add(Message.ORDER_MIN_EXE_QUANTITY_NOT_POSITIVE);
         if (enterOrderRq.getMinimumExecutionQuantity() > enterOrderRq.getQuantity())
             errors.add(Message.ORDER_MIN_EXE_QUANTITY_MORE_THAN_TOTAL_QUANTITY);
