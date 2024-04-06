@@ -150,4 +150,80 @@ public class MatcherTest {
         assertThat(security.getOrderBook().getBuyQueue().get(0).getQuantity()).isEqualTo(20);
 
     }
+    @Test
+    void new_buy_order_with_min_exe_quantity_not_enough_traded_quantity_rejected() {
+        Order order = new Order(11, security, Side.BUY, 2000, 15800,
+                broker, shareholder, 500);
+        int initial_buy_queue =  security.getOrderBook().getBuyQueue().size();
+        MatchResult result = matcher.execute(order);
+        int new_buy_queue = security.getOrderBook().getBuyQueue().size();
+
+        assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
+        assertThat(new_buy_queue).isEqualTo(initial_buy_queue);
+        assertThat(result.trades()).isEmpty();
+    }
+    @Test
+    void new_sell_order_with_min_exe_quantity_not_enough_traded_quantity_rejected() {
+        Order order = new Order(11, security, Side.SELL, 2000, 15700,
+                broker, shareholder, 500);
+        int initial_sell_queue =  security.getOrderBook().getSellQueue().size();
+        MatchResult result = matcher.execute(order);
+        int new_sell_queue = security.getOrderBook().getSellQueue().size();
+
+        assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
+        assertThat(new_sell_queue).isEqualTo(initial_sell_queue);
+        assertThat(result.trades()).isEmpty();
+    }
+
+    @Test
+    void new_buy_order_with_min_exe_quantity_no_trade_rejected() {
+        Order order = new Order(11, security, Side.BUY, 2000, 15500,
+                broker, shareholder, 500);
+        int initial_buy_queue =  security.getOrderBook().getBuyQueue().size();
+        MatchResult result = matcher.execute(order);
+        int new_buy_queue = security.getOrderBook().getBuyQueue().size();
+
+        assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
+        assertThat(new_buy_queue).isEqualTo(initial_buy_queue);
+        assertThat(result.trades()).isEmpty();
+    }
+    @Test
+    void new_sell_order_with_min_exe_quantity_no_trade_quantity_rejected() {
+        Order order = new Order(11, security, Side.SELL, 2000, 15900,
+                broker, shareholder, 500);
+        int initial_sell_queue =  security.getOrderBook().getSellQueue().size();
+        MatchResult result = matcher.execute(order);
+        int new_sell_queue = security.getOrderBook().getSellQueue().size();
+
+        assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
+        assertThat(new_sell_queue).isEqualTo(initial_sell_queue);
+        assertThat(result.trades()).isEmpty();
+    }
+
+    @Test
+    void new_buy_order_with_min_exe_quantity_enough_traded_quantity() {
+        Order order = new Order(11, security, Side.BUY, 2000, 15800,
+                broker, shareholder, 100);
+        Trade trade1 = new Trade(security, 15800, 350, orders.get(5), order);
+        int initial_buy_queue =  security.getOrderBook().getBuyQueue().size();
+        MatchResult result = matcher.execute(order);
+        int new_buy_queue = security.getOrderBook().getBuyQueue().size();
+
+        assertThat(new_buy_queue).isEqualTo(initial_buy_queue + 1);
+        assertThat(result.remainder().getQuantity()).isEqualTo(1650);
+        assertThat(result.trades()).containsExactly(trade1);
+    }
+    @Test
+    void new_sell_order_with_min_exe_quantity_enough_traded_quantity() {
+        Order order = new Order(11, security, Side.SELL, 2000, 15700,
+                broker, shareholder, 100);
+        Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order);
+        int initial_sell_queue =  security.getOrderBook().getSellQueue().size();
+        MatchResult result = matcher.execute(order);
+        int new_sell_queue = security.getOrderBook().getSellQueue().size();
+
+        assertThat(new_sell_queue).isEqualTo(initial_sell_queue + 1);
+        assertThat(result.remainder().getQuantity()).isEqualTo(1696);
+        assertThat(result.trades()).containsExactly(trade1);
+    }
 }
