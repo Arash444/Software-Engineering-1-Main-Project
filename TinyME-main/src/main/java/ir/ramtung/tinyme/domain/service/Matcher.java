@@ -75,7 +75,7 @@ public class Matcher {
             return result;
 
         int total_traded_quantity = result.trades().stream().mapToInt(Trade::getQuantity).sum();
-        if (total_traded_quantity >= order.getMinimumExecutionQuantity() && total_traded_quantity != 0) {
+        if (result.remainder().getQuantity() > 0 && total_traded_quantity >= order.getMinimumExecutionQuantity()) {
             if (order.getSide() == Side.BUY) {
                 if (!order.getBroker().hasEnoughCredit(order.getValue())) {
                     rollbackTradesBuy(order, result.trades());
