@@ -582,4 +582,48 @@ public class OrderHandlerTest {
                 Message.CANNOT_CHANGE_MIN_EXE_QUANTITY
         );
     }
+    @Test
+    void new_buy_order_with_min_exe_quantity_with_minimum_trade()
+    {
+        Broker broker1 = Broker.builder().brokerId(10).credit(100_000).build();
+        Broker broker2 = Broker.builder().brokerId(20).credit(100_000).build();
+        Broker broker3 = Broker.builder().brokerId(30).credit(100_000).build();
+        List.of(broker1, broker2, broker3).forEach(b -> brokerRepository.addBroker(b));
+
+        Order matchingSellOrder1 = new Order(100, security, Side.SELL, 30, 500, broker1,
+                shareholder, 0);
+        Order matchingSellOrder2 = new Order(110, security, Side.SELL, 20, 500, broker2,
+                shareholder, 0);
+        security.getOrderBook().enqueue(matchingSellOrder1);
+        security.getOrderBook().enqueue(matchingSellOrder2);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "ABC",
+                200, LocalDateTime.now(), Side.BUY, 100, 550, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 20));
+
+        assertThat(broker1.getCredit()).isEqualTo(100_000 + 30*500);
+        assertThat(broker2.getCredit()).isEqualTo(100_000 + 20*500);
+        assertThat(broker3.getCredit()).isEqualTo(100_000 - 50*500 - 50*550);
+    }
+    @Test
+    void new_sell_order_with_min_exe_quantity_with_minimum_trade()
+    {
+        Broker broker1 = Broker.builder().brokerId(10).credit(100_000).build();
+        Broker broker2 = Broker.builder().brokerId(20).credit(100_000).build();
+        Broker broker3 = Broker.builder().brokerId(30).credit(100_000).build();
+        List.of(broker1, broker2, broker3).forEach(b -> brokerRepository.addBroker(b));
+
+        Order matchingBuyOrder1 = new Order(100, security, Side.BUY, 10, 500, broker1,
+                shareholder, 0);
+        Order matchingBuyOrder2 = new Order(110, security, Side.BUY, 40, 500, broker2,
+                shareholder, 0);
+        security.getOrderBook().enqueue(matchingBuyOrder1);
+        security.getOrderBook().enqueue(matchingBuyOrder2);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "ABC",
+                200, LocalDateTime.now(), Side.SELL, 100, 450, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 20));
+        assertThat(broker3.getCredit()).isEqualTo(100_000 + 50*500);
+
+    }
 }
