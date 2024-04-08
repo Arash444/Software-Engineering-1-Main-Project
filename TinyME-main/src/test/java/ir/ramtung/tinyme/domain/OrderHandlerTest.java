@@ -626,4 +626,77 @@ public class OrderHandlerTest {
         assertThat(broker3.getCredit()).isEqualTo(100_000 + 50*500);
 
     }
+
+    @Test
+    void update_order_with_min_exe_quantity_does_not_lose_priority() {
+        Broker broker1 = Broker.builder().brokerId(10).credit(100_000).build();
+        Broker broker2 = Broker.builder().brokerId(20).credit(100_000).build();
+        Broker broker3 = Broker.builder().brokerId(30).credit(100_000).build();
+        List.of(broker1, broker2, broker3).forEach(b -> brokerRepository.addBroker(b));
+        List<Order> orders = Arrays.asList(
+                new Order(1, security, Side.BUY, 304, 570, broker3, shareholder, 100),
+                new Order(2, security, Side.BUY, 430, 550, broker3, shareholder, 0),
+                new Order(3, security, Side.BUY, 445, 545, broker3, shareholder, 0),
+                new Order(6, security, Side.SELL, 350, 580, broker1, shareholder, 0),
+                new Order(7, security, Side.SELL, 100, 581, broker2, shareholder, 0)
+        );
+        orders.forEach(order -> security.getOrderBook().enqueue(order));
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "ABC", 1,
+                LocalDateTime.now(), Side.BUY, 104, 570, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 100));
+
+        assertThat(broker1.getCredit()).isEqualTo(100_000);
+        assertThat(broker2.getCredit()).isEqualTo(100_000);
+        assertThat(broker3.getCredit()).isEqualTo(100_000 + 200 * 570);
+    }
+    @Test
+    void update_buy_order_with_min_exe_quantity_with_minimum_trade()
+    {
+        Broker broker1 = Broker.builder().brokerId(10).credit(1_000_000).build();
+        Broker broker2 = Broker.builder().brokerId(20).credit(1_000_000).build();
+        Broker broker3 = Broker.builder().brokerId(30).credit(1_000_000).build();
+        List.of(broker1, broker2, broker3).forEach(b -> brokerRepository.addBroker(b));
+        List<Order> orders = Arrays.asList(
+                new Order(1, security, Side.BUY, 304, 570, broker3, shareholder, 100),
+                new Order(2, security, Side.BUY, 430, 550, broker3, shareholder, 0),
+                new Order(3, security, Side.BUY, 445, 545, broker3, shareholder, 0),
+                new Order(6, security, Side.SELL, 350, 580, broker1, shareholder, 0),
+                new Order(7, security, Side.SELL, 150, 581, broker2, shareholder, 0)
+        );
+        orders.forEach(order -> security.getOrderBook().enqueue(order));
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "ABC", 1,
+                LocalDateTime.now(), Side.BUY, 600, 600, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 100));
+
+        assertThat(broker1.getCredit()).isEqualTo(1_000_000 + 350*580);
+        assertThat(broker2.getCredit()).isEqualTo(1_000_000 + 150*581);
+        assertThat(broker3.getCredit()).isEqualTo(1_000_000 + 304*570 - 350*580 - 150*581 - 100*600);
+    }
+    @Test
+    void update_sell_order_with_min_exe_quantity_with_minimum_trade()
+    {
+        Broker broker1 = Broker.builder().brokerId(10).credit(1_000_000).build();
+        Broker broker2 = Broker.builder().brokerId(20).credit(1_000_000).build();
+        Broker broker3 = Broker.builder().brokerId(30).credit(1_000_000).build();
+        List.of(broker1, broker2, broker3).forEach(b -> brokerRepository.addBroker(b));
+        List<Order> orders = Arrays.asList(
+                new Order(1, security, Side.BUY, 304, 570, broker1, shareholder, 0),
+                new Order(2, security, Side.BUY, 430, 550, broker2, shareholder, 0),
+                new Order(3, security, Side.BUY, 445, 545, broker1, shareholder, 0),
+                new Order(6, security, Side.SELL, 350, 580, broker3, shareholder, 100),
+                new Order(7, security, Side.SELL, 150, 581, broker3, shareholder, 0)
+        );
+        orders.forEach(order -> security.getOrderBook().enqueue(order));
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "ABC", 6,
+                LocalDateTime.now(), Side.SELL, 1000, 549, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 100));
+
+        assertThat(broker1.getCredit()).isEqualTo(1_000_000);
+        assertThat(broker2.getCredit()).isEqualTo(1_000_000);
+        assertThat(broker3.getCredit()).isEqualTo(1_000_000 + 304*570 + 430*550);
+
+    }
 }
