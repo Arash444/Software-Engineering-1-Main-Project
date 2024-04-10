@@ -299,4 +299,145 @@ public class OrderHandlerCreditCheckRollbackTest {
 
         verify(eventPublisher).publish(new OrderRejectedEvent(1, 200, List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
     }
+    @Test
+    void new_iceberg_order_from_buyer_with_min_exe_quantity_not_enough_trade_rejected() {
+        Broker broker1 = Broker.builder().brokerId(1).credit(100_000).build();
+        Broker broker2 = Broker.builder().brokerId(2).credit(100_000).build();
+        Broker broker3 = Broker.builder().brokerId(3).credit(950_000).build();
+        brokerRepository.addBroker(broker1);
+        brokerRepository.addBroker(broker2);
+        brokerRepository.addBroker(broker3);
+        OrderBook orderBook = security.getOrderBook();
+        List<Order> orders = Arrays.asList(
+                new Order(100, security, Side.SELL, 30, 500, broker1, shareholder, 0),
+                new Order(110, security, Side.SELL, 20, 500, broker2, shareholder, 0),
+                new Order(120, security, Side.SELL, 20, 600, broker2, shareholder, 0)
+        );
+        orders.forEach(orderBook::enqueue);
+
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                200, LocalDateTime.now(), Side.BUY, 100, 650, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 50, 90));
+
+        assertThat(broker1.getCredit()).isEqualTo(100_000);
+        assertThat(broker2.getCredit()).isEqualTo(100_000);
+        assertThat(broker3.getCredit()).isEqualTo(950_000);
+
+        assertThat(orderBook.getBuyQueue()).isEmpty();
+        assertThat(orderBook.getSellQueue()).extracting("orderId")
+                .containsExactly(100L, 110L, 120L);
+        assertThat(orderBook.getSellQueue()).extracting("quantity")
+                .containsExactly(30, 20, 20);
+        assertThat(orderBook.getSellQueue()).extracting("price")
+                .containsExactly(500, 500, 600);
+
+        verify(eventPublisher).publish(new OrderRejectedEvent(1, 200, List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
+    }
+    @Test
+    void new_iceberg_order_from_buyer_with_min_exe_quantity_no_trade_rejected() {
+        Broker broker1 = Broker.builder().brokerId(1).credit(100_000).build();
+        Broker broker2 = Broker.builder().brokerId(2).credit(100_000).build();
+        Broker broker3 = Broker.builder().brokerId(3).credit(950_000).build();
+        brokerRepository.addBroker(broker1);
+        brokerRepository.addBroker(broker2);
+        brokerRepository.addBroker(broker3);
+        OrderBook orderBook = security.getOrderBook();
+        List<Order> orders = Arrays.asList(
+                new Order(100, security, Side.SELL, 30, 500, broker1, shareholder, 0),
+                new Order(110, security, Side.SELL, 20, 500, broker2, shareholder, 0),
+                new Order(120, security, Side.SELL, 20, 600, broker2, shareholder, 0)
+        );
+        orders.forEach(orderBook::enqueue);
+
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                200, LocalDateTime.now(), Side.BUY, 100, 300, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 50, 90));
+
+        assertThat(broker1.getCredit()).isEqualTo(100_000);
+        assertThat(broker2.getCredit()).isEqualTo(100_000);
+        assertThat(broker3.getCredit()).isEqualTo(950_000);
+
+        assertThat(orderBook.getBuyQueue()).isEmpty();
+        assertThat(orderBook.getSellQueue()).extracting("orderId")
+                .containsExactly(100L, 110L, 120L);
+        assertThat(orderBook.getSellQueue()).extracting("quantity")
+                .containsExactly(30, 20, 20);
+        assertThat(orderBook.getSellQueue()).extracting("price")
+                .containsExactly(500, 500, 600);
+
+        verify(eventPublisher).publish(new OrderRejectedEvent(1, 200, List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
+    }
+
+    @Test
+    void new_iceberg_order_from_seller_with_min_exe_quantity_not_enough_trade_rejected() {
+        Broker broker1 = Broker.builder().brokerId(1).credit(100_000).build();
+        Broker broker2 = Broker.builder().brokerId(2).credit(100_000).build();
+        Broker broker3 = Broker.builder().brokerId(3).credit(950_000).build();
+        brokerRepository.addBroker(broker1);
+        brokerRepository.addBroker(broker2);
+        brokerRepository.addBroker(broker3);
+        OrderBook orderBook = security.getOrderBook();
+        List<Order> orders = Arrays.asList(
+                new Order(100, security, Side.BUY, 30, 600, broker1, shareholder, 0),
+                new Order(110, security, Side.BUY, 20, 510, broker2, shareholder, 0),
+                new Order(120, security, Side.BUY, 20, 500, broker2, shareholder, 0)
+        );
+        orders.forEach(orderBook::enqueue);
+
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                200, LocalDateTime.now(), Side.SELL, 100, 450, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 50, 90));
+
+        assertThat(broker1.getCredit()).isEqualTo(100_000);
+        assertThat(broker2.getCredit()).isEqualTo(100_000);
+        assertThat(broker3.getCredit()).isEqualTo(950_000);
+
+        assertThat(orderBook.getSellQueue()).isEmpty();
+        assertThat(orderBook.getBuyQueue()).extracting("orderId")
+                .containsExactly(100L, 110L, 120L);
+        assertThat(orderBook.getBuyQueue()).extracting("quantity")
+                .containsExactly(30, 20, 20);
+        assertThat(orderBook.getBuyQueue()).extracting("price")
+                .containsExactly(600, 510, 500);
+
+        verify(eventPublisher).publish(new OrderRejectedEvent(1, 200, List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
+    }
+    @Test
+    void new_iceberg_order_from_seller_with_min_exe_quantity_no_trade_rejected() {
+        Broker broker1 = Broker.builder().brokerId(1).credit(100_000).build();
+        Broker broker2 = Broker.builder().brokerId(2).credit(100_000).build();
+        Broker broker3 = Broker.builder().brokerId(3).credit(950_000).build();
+        brokerRepository.addBroker(broker1);
+        brokerRepository.addBroker(broker2);
+        brokerRepository.addBroker(broker3);
+        OrderBook orderBook = security.getOrderBook();
+        List<Order> orders = Arrays.asList(
+                new Order(100, security, Side.BUY, 30, 600, broker1, shareholder, 0),
+                new Order(110, security, Side.BUY, 20, 510, broker2, shareholder, 0),
+                new Order(120, security, Side.BUY, 20, 500, broker2, shareholder, 0)
+        );
+        orders.forEach(orderBook::enqueue);
+
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                200, LocalDateTime.now(), Side.SELL, 100, 800, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 50, 90));
+
+        assertThat(broker1.getCredit()).isEqualTo(100_000);
+        assertThat(broker2.getCredit()).isEqualTo(100_000);
+        assertThat(broker3.getCredit()).isEqualTo(950_000);
+
+        assertThat(orderBook.getSellQueue()).isEmpty();
+        assertThat(orderBook.getBuyQueue()).extracting("orderId")
+                .containsExactly(100L, 110L, 120L);
+        assertThat(orderBook.getBuyQueue()).extracting("quantity")
+                .containsExactly(30, 20, 20);
+        assertThat(orderBook.getBuyQueue()).extracting("price")
+                .containsExactly(600, 510, 500);
+
+        verify(eventPublisher).publish(new OrderRejectedEvent(1, 200, List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
+    }
 }
