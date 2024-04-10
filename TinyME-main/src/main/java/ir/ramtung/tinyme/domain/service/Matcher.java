@@ -69,13 +69,13 @@ public class Matcher {
         }
     }
 
-    public MatchResult execute(Order order) {
+    public MatchResult execute(Order order, Boolean isAmendOrder) {
         MatchResult result = match(order);
         if (result.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT)
             return result;
 
         int total_traded_quantity = result.trades().stream().mapToInt(Trade::getQuantity).sum();
-        if (result.remainder().getQuantity() > 0 && total_traded_quantity >= order.getMinimumExecutionQuantity()) {
+        if (result.remainder().getQuantity() > 0 && (total_traded_quantity >= order.getMinimumExecutionQuantity() || isAmendOrder)) {
             if (order.getSide() == Side.BUY) {
                 if (!order.getBroker().hasEnoughCredit(order.getValue())) {
                     rollbackTradesBuy(order, result.trades());

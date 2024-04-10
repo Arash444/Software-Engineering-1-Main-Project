@@ -36,7 +36,7 @@ public class Security {
                     enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder,
                     enterOrderRq.getEntryTime(), enterOrderRq.getPeakSize(), enterOrderRq.getMinimumExecutionQuantity());
 
-        return matcher.execute(order);
+        return matcher.execute(order, false);
     }
 
     public void deleteOrder(DeleteOrderRq deleteOrderRq) throws InvalidRequestException {
@@ -83,7 +83,7 @@ public class Security {
             order.markAsNew();
 
         orderBook.removeByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
-        MatchResult matchResult = matcher.execute(order);
+        MatchResult matchResult = matcher.execute(order, true);
         if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
             orderBook.enqueue(originalOrder);
             if (updateOrderRq.getSide() == Side.BUY) {

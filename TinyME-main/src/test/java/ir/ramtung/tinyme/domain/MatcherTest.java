@@ -141,7 +141,7 @@ public class MatcherTest {
         );
 
         Order order = new IcebergOrder(1, security, BUY, 120 , 10, broker, shareholder, 40, 0);
-        MatchResult result = matcher.execute(order);
+        MatchResult result = matcher.execute(order, false);
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.EXECUTED);
         assertThat(result.trades()).hasSize(1);
@@ -155,7 +155,7 @@ public class MatcherTest {
         Order order = new Order(11, security, Side.BUY, 2000, 15800,
                 broker, shareholder, 500);
         int initial_buy_queue =  security.getOrderBook().getBuyQueue().size();
-        MatchResult result = matcher.execute(order);
+        MatchResult result = matcher.execute(order, false);
         int new_buy_queue = security.getOrderBook().getBuyQueue().size();
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
@@ -167,7 +167,7 @@ public class MatcherTest {
         Order order = new Order(11, security, Side.SELL, 2000, 15700,
                 broker, shareholder, 500);
         int initial_sell_queue =  security.getOrderBook().getSellQueue().size();
-        MatchResult result = matcher.execute(order);
+        MatchResult result = matcher.execute(order, false);
         int new_sell_queue = security.getOrderBook().getSellQueue().size();
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
@@ -180,7 +180,7 @@ public class MatcherTest {
         Order order = new Order(11, security, Side.BUY, 2000, 15500,
                 broker, shareholder, 500);
         int initial_buy_queue =  security.getOrderBook().getBuyQueue().size();
-        MatchResult result = matcher.execute(order);
+        MatchResult result = matcher.execute(order, false);
         int new_buy_queue = security.getOrderBook().getBuyQueue().size();
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
@@ -192,7 +192,7 @@ public class MatcherTest {
         Order order = new Order(11, security, Side.SELL, 2000, 15900,
                 broker, shareholder, 500);
         int initial_sell_queue =  security.getOrderBook().getSellQueue().size();
-        MatchResult result = matcher.execute(order);
+        MatchResult result = matcher.execute(order, false);
         int new_sell_queue = security.getOrderBook().getSellQueue().size();
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
@@ -206,7 +206,7 @@ public class MatcherTest {
                 broker, shareholder, 100);
         Trade trade1 = new Trade(security, 15800, 350, orders.get(5), order);
         int initial_buy_queue =  security.getOrderBook().getBuyQueue().size();
-        MatchResult result = matcher.execute(order);
+        MatchResult result = matcher.execute(order, false);
         int new_buy_queue = security.getOrderBook().getBuyQueue().size();
 
         assertThat(new_buy_queue).isEqualTo(initial_buy_queue + 1);
@@ -219,7 +219,7 @@ public class MatcherTest {
                 broker, shareholder, 100);
         Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order);
         int initial_sell_queue =  security.getOrderBook().getSellQueue().size();
-        MatchResult result = matcher.execute(order);
+        MatchResult result = matcher.execute(order, false);
         int new_sell_queue = security.getOrderBook().getSellQueue().size();
 
         assertThat(new_sell_queue).isEqualTo(initial_sell_queue + 1);
