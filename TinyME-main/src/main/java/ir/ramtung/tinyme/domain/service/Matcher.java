@@ -45,7 +45,7 @@ public class Matcher {
                 newOrder.makeQuantityZero();
             }
         }
-        return MatchResult.executed(newOrder, trades);
+        return MatchResult.executed(newOrder, trades, last_traded_price);
     }
 
     private void rollbackTradesBuy(Order newOrder, LinkedList<Trade> trades) {

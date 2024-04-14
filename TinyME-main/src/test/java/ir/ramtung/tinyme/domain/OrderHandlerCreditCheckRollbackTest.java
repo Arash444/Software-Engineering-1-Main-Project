@@ -71,7 +71,7 @@ public class OrderHandlerCreditCheckRollbackTest {
         orders.forEach(orderBook::enqueue);
 
 
-        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(), 200, LocalDateTime.now(), Side.BUY, 100, 550, broker3.getBrokerId(), shareholder.getShareholderId(), 0, 0));
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(), 200, LocalDateTime.now(), Side.BUY, 100, 550, broker3.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
@@ -105,7 +105,7 @@ public class OrderHandlerCreditCheckRollbackTest {
         orders.forEach(orderBook::enqueue);
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(), 200, LocalDateTime.now(),
-                Side.BUY, 60, 1545, broker3.getBrokerId(), shareholder.getShareholderId(), 0, 0));
+                Side.BUY, 60, 1545, broker3.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
@@ -177,7 +177,7 @@ public class OrderHandlerCreditCheckRollbackTest {
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
                 200, LocalDateTime.now(), Side.BUY, 100, 650, broker3.getBrokerId(),
-                shareholder.getShareholderId(), 0, 90));
+                shareholder.getShareholderId(), 0, 90, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
@@ -212,7 +212,7 @@ public class OrderHandlerCreditCheckRollbackTest {
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
                 200, LocalDateTime.now(), Side.BUY, 100, 300, broker3.getBrokerId(),
-                shareholder.getShareholderId(), 0, 90));
+                shareholder.getShareholderId(), 0, 90, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
@@ -248,7 +248,7 @@ public class OrderHandlerCreditCheckRollbackTest {
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
                 200, LocalDateTime.now(), Side.SELL, 100, 450, broker3.getBrokerId(),
-                shareholder.getShareholderId(), 0, 90));
+                shareholder.getShareholderId(), 0, 90, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
@@ -283,7 +283,7 @@ public class OrderHandlerCreditCheckRollbackTest {
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
                 200, LocalDateTime.now(), Side.SELL, 100, 800, broker3.getBrokerId(),
-                shareholder.getShareholderId(), 0, 90));
+                shareholder.getShareholderId(), 0, 90, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
@@ -318,7 +318,7 @@ public class OrderHandlerCreditCheckRollbackTest {
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
                 200, LocalDateTime.now(), Side.BUY, 100, 650, broker3.getBrokerId(),
-                shareholder.getShareholderId(), 50, 90));
+                shareholder.getShareholderId(), 50, 90, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
@@ -353,7 +353,7 @@ public class OrderHandlerCreditCheckRollbackTest {
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
                 200, LocalDateTime.now(), Side.BUY, 100, 300, broker3.getBrokerId(),
-                shareholder.getShareholderId(), 50, 90));
+                shareholder.getShareholderId(), 50, 90, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
@@ -389,7 +389,7 @@ public class OrderHandlerCreditCheckRollbackTest {
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
                 200, LocalDateTime.now(), Side.SELL, 100, 450, broker3.getBrokerId(),
-                shareholder.getShareholderId(), 50, 90));
+                shareholder.getShareholderId(), 50, 90, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
@@ -424,7 +424,7 @@ public class OrderHandlerCreditCheckRollbackTest {
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
                 200, LocalDateTime.now(), Side.SELL, 100, 800, broker3.getBrokerId(),
-                shareholder.getShareholderId(), 50, 90));
+                shareholder.getShareholderId(), 50, 90, 0));
 
         assertThat(broker1.getCredit()).isEqualTo(100_000);
         assertThat(broker2.getCredit()).isEqualTo(100_000);
