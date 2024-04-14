@@ -77,7 +77,7 @@ public class Security {
             if (updateOrderRq.getSide() == Side.BUY) {
                 order.getBroker().decreaseCreditBy(order.getValue());
             }
-            return MatchResult.executed(null, List.of());
+            return MatchResult.executed(null, List.of(), 0);
         }
         else
             order.markAsNew();

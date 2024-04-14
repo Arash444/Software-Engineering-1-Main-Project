@@ -11,7 +11,7 @@ public class Matcher {
     public MatchResult match(Order newOrder) {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
-
+        int last_traded_price = 0;
         while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0) {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
@@ -29,6 +29,7 @@ public class Matcher {
             }
             trade.increaseSellersCredit();
             trades.add(trade);
+            last_traded_price = Math.max(last_traded_price, matchingOrder.getPrice());
 
             if (newOrder.getQuantity() >= matchingOrder.getQuantity()) {
                 newOrder.decreaseQuantity(matchingOrder.getQuantity());

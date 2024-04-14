@@ -8,24 +8,27 @@ public final class MatchResult {
     private final MatchingOutcome outcome;
     private final Order remainder;
     private final LinkedList<Trade> trades;
+    private final int last_traded_price;
 
-    public static MatchResult executed(Order remainder, List<Trade> trades) {
-        return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades));
+    public static MatchResult executed(Order remainder, List<Trade> trades, int last_traded_price) {
+        return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), last_traded_price);
     }
 
     public static MatchResult notEnoughCredit() {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_CREDIT, null, new LinkedList<>());
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_CREDIT, null, new LinkedList<>(), 0);
     }
     public static MatchResult notEnoughPositions() {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_POSITIONS, null, new LinkedList<>());
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_POSITIONS, null, new LinkedList<>(), 0);
     }
     public static MatchResult notEnoughTradedQuantity() {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>());
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>(), 0);
     }
-    private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades) {
+    private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades, int last_traded_price) {
         this.outcome = outcome;
         this.remainder = remainder;
         this.trades = trades;
+        this.last_traded_price = last_traded_price;
+
     }
 
     public MatchingOutcome outcome() {
@@ -33,6 +36,9 @@ public final class MatchResult {
     }
     public Order remainder() {
         return remainder;
+    }
+    public int getLastTradedPrice() {
+        return last_traded_price;
     }
 
     public LinkedList<Trade> trades() {
