@@ -12,11 +12,12 @@ public class Matcher {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
         int last_traded_price = 0;
-        while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0 &&
-                newOrder.canTrade()) {
+        while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0) {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
                 break;
+            if (!matchingOrder.canTrade())
+                continue;
 
             Trade trade = new Trade(newOrder.getSecurity(), matchingOrder.getPrice(),
                     Math.min(newOrder.getQuantity(), matchingOrder.getQuantity()), newOrder, matchingOrder);
