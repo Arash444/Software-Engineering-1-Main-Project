@@ -28,6 +28,14 @@ public class StopLimitOrder extends Order{
         this.hasBeenTriggered = isTriggered;
     }
 
+    public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price,
+                          Broker broker, Shareholder shareholder, LocalDateTime entryTime, int stopPrice) {
+        super(orderId, security, side, quantity, price, broker, shareholder,
+                entryTime, OrderStatus.NEW, 0);
+        this.stopPrice = stopPrice;
+        this.hasBeenTriggered = false;
+    }
+
     @Override
     public Order snapshot() {
         return new StopLimitOrder(orderId, security, side, quantity, price, broker, shareholder, entryTime,

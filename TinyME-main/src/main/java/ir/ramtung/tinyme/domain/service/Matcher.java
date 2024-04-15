@@ -4,6 +4,7 @@ import ir.ramtung.tinyme.domain.entity.*;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 
 @Service
@@ -73,6 +74,18 @@ public class Matcher {
     }
 
     public MatchResult execute(Order order, Boolean isAmendOrder) {
+        if (!order.canTrade()) {
+            if (order.getSide() == Side.BUY) {
+                if (!order.getBroker().hasEnoughCredit(order.getValue())) {
+                    return MatchResult.notEnoughCredit();
+                }
+                order.getBroker().decreaseCreditBy(order.getValue());
+            }
+            order.getSecurity().getOrderBook().enqueue(order);
+            return MatchResult.executed(order, List.of(), 0); 
+        }
+
+
         MatchResult result = match(order);
         if (result.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT)
             return result;
