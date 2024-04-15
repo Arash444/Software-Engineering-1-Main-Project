@@ -13,7 +13,7 @@ public class Matcher {
         LinkedList<Trade> trades = new LinkedList<>();
         int last_traded_price = 0;
         while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0 &&
-                newOrder.canBeTradedWith()) {
+                newOrder.canTrade()) {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
                 break;
