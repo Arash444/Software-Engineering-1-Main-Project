@@ -12,7 +12,8 @@ public class Matcher {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
         int last_traded_price = 0;
-        while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0) {
+        while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0 &&
+                newOrder.canBeTradedWith()) {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
                 break;
@@ -76,7 +77,8 @@ public class Matcher {
             return result;
 
         int total_traded_quantity = result.trades().stream().mapToInt(Trade::getQuantity).sum();
-        if (result.remainder().getQuantity() > 0 && (total_traded_quantity >= order.getMinimumExecutionQuantity() || isAmendOrder)) {
+        if (result.remainder().getQuantity() > 0 && (total_traded_quantity >= order.getMinimumExecutionQuantity()
+                || isAmendOrder)) {
             if (order.getSide() == Side.BUY) {
                 if (!order.getBroker().hasEnoughCredit(order.getValue())) {
                     rollbackTradesBuy(order, result.trades());

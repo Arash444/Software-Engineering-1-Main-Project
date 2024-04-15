@@ -115,4 +115,6 @@ public class Order {
     }
 
     public int getTotalQuantity() { return quantity; }
+
+    public boolean canBeTradedWith() {return true;}
 }

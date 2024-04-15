@@ -47,4 +47,5 @@ public class Trade {
         return buy.getBroker().hasEnoughCredit(getTradedValue());
     }
 
+
 }

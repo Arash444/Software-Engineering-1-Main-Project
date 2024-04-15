@@ -40,7 +40,6 @@ public class StopLimitOrder extends Order{
                 OrderStatus.SNAPSHOT, stopPrice, hasBeenTriggered);
     }
 
-
     @Override
     public void updateFromRequest(EnterOrderRq updateOrderRq) {
 
@@ -60,5 +59,7 @@ public class StopLimitOrder extends Order{
         }
     }
 
+    @Override
+    public boolean canBeTradedWith(){ return hasBeenTriggered; }
 
-}
+    }
