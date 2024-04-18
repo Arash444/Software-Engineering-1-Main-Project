@@ -69,5 +69,6 @@ public class StopLimitOrder extends Order{
 
     @Override
     public boolean canTrade(){ return hasBeenTriggered; }
+    public boolean hasBeenTriggered(){ return hasBeenTriggered; }
 
     }

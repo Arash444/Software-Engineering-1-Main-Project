@@ -18,5 +18,8 @@ public class Message {
     public static final String SELLER_HAS_NOT_ENOUGH_POSITIONS = "Seller has not enough positions";
     public static final String CANNOT_CHANGE_MIN_EXE_QUANTITY = "Cannot change minimum execution quantity";
     public static final String NOT_ENOUGH_TRADED_QUANTITY = "Not enough traded quantity";
+    public static final String ORDER_STOP_PRICE_NOT_POSITIVE = "Order stop price is not positive";
+    public static final String CANNOT_CHANGE_STOP_PRICE = "Cannot change stop price";
+    public static final String CANNOT_HAVE_BOTH_STOP_PRICE_AND_MIN_EXE_QUANTITY = "Cannot have both a stop price and a minimum execution Quantity";
 
 }

@@ -63,6 +63,11 @@ public class Security {
         if (!(order instanceof IcebergOrder) && updateOrderRq.getPeakSize() != 0)
             throw new InvalidRequestException(Message.CANNOT_SPECIFY_PEAK_SIZE_FOR_A_NON_ICEBERG_ORDER);
 
+        boolean changed_triggered_order_stop_price = order instanceof StopLimitOrder stopLimitOrder
+                && stopLimitOrder.hasBeenTriggered() && (stopLimitOrder.getStopPrice() != updateOrderRq.getStopPrice());
+        if (!(order instanceof StopLimitOrder) || changed_triggered_order_stop_price)
+            throw new InvalidRequestException(Message.CANNOT_CHANGE_STOP_PRICE);
+
         if (updateOrderRq.getSide() == Side.SELL &&
                 !order.getShareholder().hasEnoughPositionsOn(this,
                 orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
