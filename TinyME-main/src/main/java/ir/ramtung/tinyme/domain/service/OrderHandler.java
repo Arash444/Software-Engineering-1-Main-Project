@@ -141,6 +141,8 @@ public class OrderHandler {
             errors.add(Message.ORDER_STOP_PRICE_NOT_POSITIVE);
         if (enterOrderRq.getStopPrice() > 0 && enterOrderRq.getMinimumExecutionQuantity() > 0)
             errors.add(Message.CANNOT_HAVE_BOTH_STOP_PRICE_AND_MIN_EXE_QUANTITY);
+        if (enterOrderRq.getStopPrice() > 0 && enterOrderRq.getPeakSize() > 0)
+            errors.add(Message.CANNOT_BE_ICEBERG_AND_STOP_LIMIT);
         Security security = securityRepository.findSecurityByIsin(enterOrderRq.getSecurityIsin());
         if (security == null)
             errors.add(Message.UNKNOWN_SECURITY_ISIN);
