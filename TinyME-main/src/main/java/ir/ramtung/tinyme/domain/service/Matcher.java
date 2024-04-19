@@ -12,7 +12,7 @@ public class Matcher {
     public MatchResult match(Order newOrder) {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
-        int last_traded_price = 0;
+        int last_traded_price = newOrder.getSecurity().getLastTradedPrice();
         while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0) {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
@@ -82,7 +82,8 @@ public class Matcher {
                 order.getBroker().decreaseCreditBy(order.getValue());
             }
             order.getSecurity().getOrderBook().enqueue(order);
-            return MatchResult.executed(order, List.of(), 0); 
+            int last_traded_price = order.getSecurity().getLastTradedPrice();
+            return MatchResult.executed(order, List.of(), last_traded_price);
         }
 
 

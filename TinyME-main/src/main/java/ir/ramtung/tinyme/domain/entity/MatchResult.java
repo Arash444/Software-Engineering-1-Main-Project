@@ -8,10 +8,10 @@ public final class MatchResult {
     private final MatchingOutcome outcome;
     private final Order remainder;
     private final LinkedList<Trade> trades;
-    private final int last_traded_price;
+    private final int lastTradedPrice;
 
-    public static MatchResult executed(Order remainder, List<Trade> trades, int last_traded_price) {
-        return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), last_traded_price);
+    public static MatchResult executed(Order remainder, List<Trade> trades, int lastTradedPrice) {
+        return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), lastTradedPrice);
     }
 
     public static MatchResult notEnoughCredit() {
@@ -23,11 +23,11 @@ public final class MatchResult {
     public static MatchResult notEnoughTradedQuantity() {
         return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>(), 0);
     }
-    private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades, int last_traded_price) {
+    private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades, int lastTradedPrice) {
         this.outcome = outcome;
         this.remainder = remainder;
         this.trades = trades;
-        this.last_traded_price = last_traded_price;
+        this.lastTradedPrice = lastTradedPrice;
 
     }
 
@@ -38,7 +38,7 @@ public final class MatchResult {
         return remainder;
     }
     public int getLastTradedPrice() {
-        return last_traded_price;
+        return lastTradedPrice;
     }
 
     public LinkedList<Trade> trades() {
