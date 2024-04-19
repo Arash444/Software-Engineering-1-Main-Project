@@ -70,6 +70,7 @@ public class OrderHandler {
         } catch (InvalidRequestException ex) {
             eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), ex.getReasons()));
         }
+        handleStopLimitOrderActivation()
     }
 
     public void handleDeleteOrder(DeleteOrderRq deleteOrderRq) {

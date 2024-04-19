@@ -27,7 +27,7 @@ public class Security {
         if (enterOrderRq.getSide() == Side.SELL &&
                 !shareholder.hasEnoughPositionsOn(this,
                 orderBook.totalSellQuantityByShareholder(shareholder) + enterOrderRq.getQuantity()))
-            return MatchResult.notEnoughPositions();
+            return MatchResult.notEnoughPositions(lastTradedPrice);
         Order order;
         if (enterOrderRq.getPeakSize() != 0)
             order = new IcebergOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
@@ -42,7 +42,9 @@ public class Security {
                     enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
                     enterOrderRq.getMinimumExecutionQuantity());
 
-        return matcher.execute(order, false);
+        MatchResult matchResult = matcher.execute(order, false);
+        lastTradedPrice = matchResult.getLastTradedPrice();;
+        return matchResult;
     }
 
     public void deleteOrder(DeleteOrderRq deleteOrderRq) throws InvalidRequestException {
@@ -73,7 +75,7 @@ public class Security {
         if (updateOrderRq.getSide() == Side.SELL &&
                 !order.getShareholder().hasEnoughPositionsOn(this,
                 orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
-            return MatchResult.notEnoughPositions();
+            return MatchResult.notEnoughPositions(lastTradedPrice);
 
         boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
                 || updateOrderRq.getPrice() != order.getPrice()
@@ -88,7 +90,7 @@ public class Security {
             if (updateOrderRq.getSide() == Side.BUY) {
                 order.getBroker().decreaseCreditBy(order.getValue());
             }
-            return MatchResult.executed(null, List.of(), 0);
+            return MatchResult.executed(null, List.of(), lastTradedPrice);
         }
         else
             order.markAsNew();
@@ -101,6 +103,7 @@ public class Security {
                 originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
             }
         }
+        lastTradedPrice = matchResult.getLastTradedPrice();
         return matchResult;
     }
 }

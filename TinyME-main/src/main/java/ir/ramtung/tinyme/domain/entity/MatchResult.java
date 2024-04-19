@@ -14,14 +14,14 @@ public final class MatchResult {
         return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), lastTradedPrice);
     }
 
-    public static MatchResult notEnoughCredit() {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_CREDIT, null, new LinkedList<>(), 0);
+    public static MatchResult notEnoughCredit(int lastTradedPrice) {
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_CREDIT, null, new LinkedList<>(), lastTradedPrice);
     }
-    public static MatchResult notEnoughPositions() {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_POSITIONS, null, new LinkedList<>(), 0);
+    public static MatchResult notEnoughPositions(int lastTradedPrice) {
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_POSITIONS, null, new LinkedList<>(), lastTradedPrice);
     }
-    public static MatchResult notEnoughTradedQuantity() {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>(), 0);
+    public static MatchResult notEnoughTradedQuantity(int lastTradedPrice) {
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>(), lastTradedPrice);
     }
     private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades, int lastTradedPrice) {
         this.outcome = outcome;
