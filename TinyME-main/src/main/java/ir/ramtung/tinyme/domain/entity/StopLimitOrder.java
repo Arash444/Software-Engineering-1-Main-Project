@@ -71,4 +71,6 @@ public class StopLimitOrder extends Order{
     public boolean canTrade(){ return hasBeenTriggered; }
     public boolean hasBeenTriggered(){ return hasBeenTriggered; }
 
+    public void activate() { hasBeenTriggered = true; }
+
     }

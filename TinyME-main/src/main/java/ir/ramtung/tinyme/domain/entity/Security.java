@@ -55,7 +55,7 @@ public class Security {
             order.getBroker().increaseCreditBy(order.getValue());
         orderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
     }
-    public MatchResult triggerOrder(Order order, Matcher matcher){
+    public MatchResult triggerOrder(StopLimitOrder order, Matcher matcher){
         if (order.getSide() == Side.BUY) {
             order.getBroker().increaseCreditBy(order.getValue());
         }
@@ -70,6 +70,7 @@ public class Security {
                 originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
             }
         }
+        order.activate();
         lastTradedPrice = matchResult.getLastTradedPrice();
         return matchResult;
     }
