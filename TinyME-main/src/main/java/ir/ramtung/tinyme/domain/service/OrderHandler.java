@@ -33,7 +33,46 @@ public class OrderHandler {
         this.eventPublisher = eventPublisher;
         this.matcher = matcher;
     }
-
+    public void handleStopLimitOrderActivation(Security security, int requestID) {
+        for (Order order : security.getOrderBook().getBuyQueue()){
+            if (order instanceof StopLimitOrder stopLimitOrder && security.getLastTradedPrice() >= stopLimitOrder.getStopPrice()) {
+                MatchResult buyMatchResult = security.triggerOrder(order, matcher);
+                if (buyMatchResult.outcome() == MatchingOutcome.EXECUTED)
+                    eventPublisher.publish(new OrderActivatedEvent(requestID, order.getOrderId()));
+                else if (buyMatchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
+                    eventPublisher.publish(new OrderRejectedEvent(requestID, order.getOrderId(), List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
+                    return;
+                }
+                else if (buyMatchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
+                    eventPublisher.publish(new OrderRejectedEvent(requestID, order.getOrderId(), List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
+                    return;
+                }
+                if (!buyMatchResult.trades().isEmpty()) {
+                    eventPublisher.publish(new OrderExecutedEvent(requestID, order.getOrderId(),
+                            buyMatchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
+                }
+            }
+        }
+        for (Order order : security.getOrderBook().getSellQueue()){
+            if (order instanceof StopLimitOrder stopLimitOrder && security.getLastTradedPrice() <= stopLimitOrder.getStopPrice()) {
+                MatchResult sellMatchResult = security.triggerOrder(order, matcher);
+                if (sellMatchResult.outcome() == MatchingOutcome.EXECUTED)
+                    eventPublisher.publish(new OrderActivatedEvent(requestID, order.getOrderId()));
+                else if (sellMatchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
+                    eventPublisher.publish(new OrderRejectedEvent(requestID, order.getOrderId(), List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
+                    return;
+                }
+                else if (sellMatchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
+                    eventPublisher.publish(new OrderRejectedEvent(requestID, order.getOrderId(), List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
+                    return;
+                }
+                if (!sellMatchResult.trades().isEmpty()) {
+                    eventPublisher.publish(new OrderExecutedEvent(requestID, order.getOrderId(),
+                            sellMatchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
+                }
+            }
+        }
+    }
     public void handleEnterOrder(EnterOrderRq enterOrderRq) {
         try {
             validateEnterOrderRq(enterOrderRq);
@@ -67,10 +106,12 @@ public class OrderHandler {
             if (!matchResult.trades().isEmpty()) {
                 eventPublisher.publish(new OrderExecutedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
             }
+
+            handleStopLimitOrderActivation(security, enterOrderRq.getRequestId());
+
         } catch (InvalidRequestException ex) {
             eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), ex.getReasons()));
         }
-        handleStopLimitOrderActivation()
     }
 
     public void handleDeleteOrder(DeleteOrderRq deleteOrderRq) {

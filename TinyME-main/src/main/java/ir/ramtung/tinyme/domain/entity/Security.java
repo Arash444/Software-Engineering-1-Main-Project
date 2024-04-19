@@ -55,7 +55,24 @@ public class Security {
             order.getBroker().increaseCreditBy(order.getValue());
         orderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
     }
+    public MatchResult triggerOrder(Order order, Matcher matcher){
+        if (order.getSide() == Side.BUY) {
+            order.getBroker().increaseCreditBy(order.getValue());
+        }
+        Order originalOrder = order.snapshot();
+        order.markAsNew();
 
+        orderBook.removeByOrderId(order.getSide(), order.getOrderId());
+        MatchResult matchResult = matcher.execute(order, false);
+        if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
+            orderBook.enqueue(originalOrder);
+            if (order.getSide() == Side.BUY) {
+                originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
+            }
+        }
+        lastTradedPrice = matchResult.getLastTradedPrice();
+        return matchResult;
+    }
     public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
         Order order = orderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
         if (order == null)
