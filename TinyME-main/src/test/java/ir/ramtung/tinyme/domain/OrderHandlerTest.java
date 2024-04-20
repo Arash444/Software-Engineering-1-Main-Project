@@ -140,7 +140,7 @@ public class OrderHandlerTest {
     @Test
     void invalid_new_order_with_multiple_errors() {
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "XXX", -1,
-                LocalDateTime.now(), Side.SELL, -2, 0, -1, -1, 0, -1, 0));
+                LocalDateTime.now(), Side.SELL, -2, 0, -1, -1, 0, -1, -1));
         ArgumentCaptor<OrderRejectedEvent> orderRejectedCaptor = ArgumentCaptor.forClass(OrderRejectedEvent.class);
         verify(eventPublisher).publish(orderRejectedCaptor.capture());
         OrderRejectedEvent outputEvent = orderRejectedCaptor.getValue();
@@ -208,7 +208,7 @@ public class OrderHandlerTest {
     @Test
     void invalid_update_with_multiple_errors() {
         orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "XXX", -1, LocalDateTime.now(),
-                Side.SELL, -2, 0, -1, shareholder.getShareholderId(), 0, -1, 0));
+                Side.SELL, -2, 0, -1, shareholder.getShareholderId(), -1, -1, -1));
         ArgumentCaptor<OrderRejectedEvent> orderRejectedCaptor = ArgumentCaptor.forClass(OrderRejectedEvent.class);
         verify(eventPublisher).publish(orderRejectedCaptor.capture());
         OrderRejectedEvent outputEvent = orderRejectedCaptor.getValue();
@@ -221,7 +221,11 @@ public class OrderHandlerTest {
                 Message.ORDER_QUANTITY_NOT_POSITIVE,
                 Message.INVALID_PEAK_SIZE,
                 Message.ORDER_MIN_EXE_QUANTITY_NOT_POSITIVE,
-                Message.ORDER_MIN_EXE_QUANTITY_MORE_THAN_TOTAL_QUANTITY
+                Message.ORDER_MIN_EXE_QUANTITY_MORE_THAN_TOTAL_QUANTITY,
+                Message.ORDER_STOP_PRICE_NOT_POSITIVE,
+                Message.CANNOT_HAVE_BOTH_STOP_PRICE_AND_MIN_EXE_QUANTITY,
+                Message.CANNOT_BE_ICEBERG_AND_STOP_LIMIT
+
         );
     }
 
