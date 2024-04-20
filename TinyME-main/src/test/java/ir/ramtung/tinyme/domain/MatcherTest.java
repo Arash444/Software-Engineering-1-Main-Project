@@ -10,11 +10,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static ir.ramtung.tinyme.domain.entity.Side.BUY;
+import static ir.ramtung.tinyme.domain.entity.Side.SELL;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -214,16 +216,69 @@ public class MatcherTest {
         assertThat(result.trades()).containsExactly(trade1);
     }
     @Test
-    void new_sell_order_with_min_exe_quantity_enough_traded_quantity() {
-        Order order = new Order(11, security, Side.SELL, 2000, 15700,
+    void new_stop_limit_order_has_not_been_activated() {
+        StopLimitOrder order = new StopLimitOrder(11, security, Side.SELL, 2000, 15500,
                 broker, shareholder, 100);
-        Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order);
-        int initial_sell_queue =  security.getOrderBook().getSellQueue().size();
         MatchResult result = matcher.execute(order, false);
-        int new_sell_queue = security.getOrderBook().getSellQueue().size();
+        assertThat(result.remainder()).isEqualTo(order);
+        assertThat(result.trades()).isEmpty();
+    }
+    @Test
+    void new_stop_limit_order_has_been_activated() {
+        StopLimitOrder order = new StopLimitOrder(11, security, Side.SELL, 500, 15500,
+                broker, shareholder, LocalDateTime.now(), OrderStatus.NEW, 100, true);
+        Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order);
+        Trade trade2 = new Trade(security, 15500, 43, orders.get(1), order.snapshotWithQuantity(196));
+        MatchResult result = matcher.execute(order, false);
+        assertThat(result.remainder().getQuantity()).isEqualTo(153);
+        assertThat(result.trades()).containsExactly(trade1, trade2);
+        assertThat(security.getOrderBook().getBuyQueue().getFirst().getOrderId()).isEqualTo(3);
+    }
+    @Test
+    void new_sell_order_buy_stop_limit_order_should_not_trade_but_others_should() {
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(11, security, Side.BUY, 2000, 15750,
+                broker, shareholder, 100);
+        orderBook.enqueue(stopLimitOrder);
 
-        assertThat(new_sell_queue).isEqualTo(initial_sell_queue + 1);
-        assertThat(result.remainder().getQuantity()).isEqualTo(1696);
-        assertThat(result.trades()).containsExactly(trade1);
+        Order order = new Order(12, security, Side.SELL, 500, 15500, broker, shareholder, 0);
+        Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order);
+        Trade trade2 = new Trade(security, 15500, 43, orders.get(1), order.snapshotWithQuantity(196));
+        MatchResult result = matcher.match(order);
+        assertThat(result.remainder().getQuantity()).isEqualTo(153);
+        assertThat(result.trades()).containsExactly(trade1, trade2);
+        assertThat(security.getOrderBook().getBuyQueue().getFirst().getOrderId()).isEqualTo(11);
+    }
+    @Test
+    void new_sell_order_buy_activated_stop_limit_order_should_trade() {
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(11, security, Side.BUY, 100, 15750,
+                broker, shareholder, LocalDateTime.now(), OrderStatus.NEW, 100, true);
+        orderBook.enqueue(stopLimitOrder);
+
+        Order order = new Order(12, security, Side.SELL, 500, 15500, broker, shareholder, 0);
+        Trade trade1 = new Trade(security, 15750, 100, stopLimitOrder, order);
+        Trade trade2 = new Trade(security, 15700, 304, orders.get(0), order.snapshotWithQuantity(400));
+        Trade trade3 = new Trade(security, 15500, 43, orders.get(1), order.snapshotWithQuantity(96));
+        MatchResult result = matcher.execute(order, false);
+        assertThat(result.remainder().getQuantity()).isEqualTo(53);
+        assertThat(result.trades()).containsExactly(trade1, trade2, trade3);
+        assertThat(security.getOrderBook().getBuyQueue().getFirst().getOrderId()).isEqualTo(3);
+    }
+    @Test
+    void new_buy_order_does_not_match_same_last_traded_price() {
+        Order order = new Order(11, security, BUY, 2000, 15500, broker, shareholder, 0);
+        MatchResult result = matcher.execute(order, false);
+        assertThat(result.getLastTradedPrice()).isEqualTo(security.getLastTradedPrice());
+    }
+    @Test
+    void new_buy_order_matches_partially_with_the_entire_sell_queue_only_last_traded_price() {
+        Order order = new Order(11, security, BUY, 2000, 15850, broker, shareholder, 0);
+        MatchResult result = matcher.execute(order, false);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15820);
+    }
+    @Test
+    void new_sell_order_matches_partially_with_the_entire_buy_queue_only_last_traded_price() {
+        Order order = new Order(11, security, SELL, 3000, 15000, broker, shareholder, 0);
+        MatchResult result = matcher.execute(order, false);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15400);
     }
 }
