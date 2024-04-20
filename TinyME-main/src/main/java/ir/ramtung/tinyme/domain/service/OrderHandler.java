@@ -35,7 +35,8 @@ public class OrderHandler {
     }
     public void handleStopLimitOrderActivation(Security security, long requestID) {
         for (Order order : security.getOrderBook().getBuyQueue()){
-            if (order instanceof StopLimitOrder stopLimitOrder && security.getLastTradedPrice() >= stopLimitOrder.getStopPrice()) {
+            if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
+                    security.getLastTradedPrice() >= stopLimitOrder.getStopPrice()) {
                 MatchResult buyMatchResult = security.triggerOrder(stopLimitOrder, matcher);
                 if (buyMatchResult.outcome() == MatchingOutcome.EXECUTED)
                     eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
@@ -54,7 +55,8 @@ public class OrderHandler {
             }
         }
         for (Order order : security.getOrderBook().getSellQueue()){
-            if (order instanceof StopLimitOrder stopLimitOrder && security.getLastTradedPrice() <= stopLimitOrder.getStopPrice()) {
+            if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder
+                    && security.getLastTradedPrice() <= stopLimitOrder.getStopPrice()) {
                 MatchResult sellMatchResult = security.triggerOrder(stopLimitOrder, matcher);
                 if (sellMatchResult.outcome() == MatchingOutcome.EXECUTED)
                     eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
