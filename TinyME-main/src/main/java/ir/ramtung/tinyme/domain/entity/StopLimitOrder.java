@@ -20,6 +20,12 @@ public class StopLimitOrder extends Order{
         this.stopPrice = stopPrice;
         this.hasBeenTriggered = false;
     }
+    public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker,
+                          Shareholder shareholder, int stopPrice) {
+        super(orderId, security, side, quantity, price, broker, shareholder, LocalDateTime.now(), OrderStatus.NEW, 0);
+        this.stopPrice = stopPrice;
+        this.hasBeenTriggered = false;
+    }
 
     public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker,
                           Shareholder shareholder, LocalDateTime entryTime, OrderStatus status, int stopPrice, boolean isTriggered) {
