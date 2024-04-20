@@ -5,11 +5,9 @@ import ir.ramtung.tinyme.domain.entity.*;
 import ir.ramtung.tinyme.domain.service.Matcher;
 import ir.ramtung.tinyme.domain.service.OrderHandler;
 import ir.ramtung.tinyme.messaging.EventPublisher;
+import ir.ramtung.tinyme.messaging.Message;
 import ir.ramtung.tinyme.messaging.TradeDTO;
-import ir.ramtung.tinyme.messaging.event.OrderAcceptedEvent;
-import ir.ramtung.tinyme.messaging.event.OrderActivatedEvent;
-import ir.ramtung.tinyme.messaging.event.OrderDeletedEvent;
-import ir.ramtung.tinyme.messaging.event.OrderExecutedEvent;
+import ir.ramtung.tinyme.messaging.event.*;
 import ir.ramtung.tinyme.messaging.request.DeleteOrderRq;
 import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
 import ir.ramtung.tinyme.repository.BrokerRepository;
@@ -17,6 +15,7 @@ import ir.ramtung.tinyme.repository.SecurityRepository;
 import ir.ramtung.tinyme.repository.ShareholderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -148,7 +147,7 @@ public class StopLimitOrderTest {
         Order sellOrder = new Order(3, security, SELL, 300, 15300,
                 sell_broker, shareholder, 0);
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, SELL, 300, 15000,
-                sell_broker, shareholder, 15500);
+                sell_broker, shareholder, 15400);
         security.getOrderBook().enqueue(stopLimitOrder);
         security.getOrderBook().enqueue(buyOrder);
         security.getOrderBook().enqueue(sellOrder);
@@ -157,7 +156,7 @@ public class StopLimitOrderTest {
                 buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
         Order newBuyOrder = new Order(4, security, BUY, 200, 15000,
-                buy_broker, shareholder, 15500);
+                buy_broker, shareholder, 0);
 
         Trade trade1 = new Trade(security, 15300, 300,
                 newBuyOrder, sellOrder);
@@ -177,18 +176,52 @@ public class StopLimitOrderTest {
         Order sellOrder = new Order(3, security, SELL, 300, 15300,
                 sell_broker, shareholder, 0);
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, SELL, 300, 15000,
-                sell_broker, shareholder, 15500);
-        security.getOrderBook().enqueue(stopLimitOrder);
+                sell_broker, shareholder, 15400);
         security.getOrderBook().enqueue(buyOrder);
+        security.getOrderBook().enqueue(stopLimitOrder);
         security.getOrderBook().enqueue(sellOrder);
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
-                4, LocalDateTime.now(), Side.BUY, 300, 15400,
+                4, LocalDateTime.now(), Side.BUY, 300, 15200,
                 buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
-        int new_sell_credit = 100000000 + (15300 * 300) + (300 * 15100);
+        int new_sell_credit = 100000000;
         assertThat(sell_broker.getCredit()).isEqualTo(new_sell_credit);
-        int new_buy_credit = 100000000 - 15300 * 300;
+        int new_buy_credit = 100000000 ;
         assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
+    }
+    @Test
+    void invalid_update_changing_stop_price_non_stop_limit_order() {
+        Order beforeUpdate = new Order(1, security, Side.BUY, 500, 15450,
+                buy_broker, shareholder, 0);
+        security.getOrderBook().enqueue(beforeUpdate);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "ABC", 1,
+                LocalDateTime.now(), Side.BUY, 500, 15450, buy_broker.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 500));
+
+        ArgumentCaptor<OrderRejectedEvent> orderRejectedCaptor = ArgumentCaptor.forClass(OrderRejectedEvent.class);
+        verify(eventPublisher).publish(orderRejectedCaptor.capture());
+        OrderRejectedEvent outputEvent = orderRejectedCaptor.getValue();
+        assertThat(outputEvent.getErrors()).containsOnly(
+                Message.CANNOT_CHANGE_STOP_PRICE
+        );
+    }
+    @Test
+    void invalid_update_changing_stop_price_stop_limit_order() {
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 100, 15750,
+                buy_broker, shareholder, LocalDateTime.now(), OrderStatus.NEW, 100, true);
+        security.getOrderBook().enqueue(stopLimitOrder);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "ABC", 1,
+                LocalDateTime.now(), Side.BUY, 500, 15450, buy_broker.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 500));
+
+        ArgumentCaptor<OrderRejectedEvent> orderRejectedCaptor = ArgumentCaptor.forClass(OrderRejectedEvent.class);
+        verify(eventPublisher).publish(orderRejectedCaptor.capture());
+        OrderRejectedEvent outputEvent = orderRejectedCaptor.getValue();
+        assertThat(outputEvent.getErrors()).containsOnly(
+                Message.CANNOT_CHANGE_STOP_PRICE
+        );
     }
 }
