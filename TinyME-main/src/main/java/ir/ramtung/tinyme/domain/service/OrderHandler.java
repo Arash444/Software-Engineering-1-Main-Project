@@ -34,58 +34,45 @@ public class OrderHandler {
         this.matcher = matcher;
     }
     public void handleStopLimitOrderActivation(Security security, long requestID) {
-        boolean triggered_order = false;
-        int count = 0;
-        while(triggered_order || count == 0) {
-            triggered_order = false;
-            count++;
+        boolean has_triggered_orders = true;
+        while(has_triggered_orders){
+            has_triggered_orders = false;
+            List<StopLimitOrder> ordersToTrigger = new LinkedList<>();
             for (Order order : security.getOrderBook().getBuyQueue()) {
                 if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
                         security.getLastTradedPrice() >= stopLimitOrder.getStopPrice()) {
-                    MatchResult buyMatchResult = security.triggerOrder(stopLimitOrder, matcher);
-                    triggered_order = true;
-                    if (buyMatchResult.outcome() == MatchingOutcome.EXECUTED)
-                        eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
-                    else if (buyMatchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
-                        eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(), List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
-                        return;
-                    } else if (buyMatchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
-                        eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(), List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
-                        return;
-                    }
-                    if (!buyMatchResult.trades().isEmpty()) {
-                        eventPublisher.publish(new OrderExecutedEvent(requestID, stopLimitOrder.getOrderId(),
-                                buyMatchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
-                    }
+                    ordersToTrigger.add(stopLimitOrder);
+                    has_triggered_orders = true;
                 }
             }
-        }
-        count = 0;
-        while(triggered_order || count == 0) {
-            triggered_order = false;
-            count++;
             for (Order order : security.getOrderBook().getSellQueue()) {
-                if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder
-                        && security.getLastTradedPrice() <= stopLimitOrder.getStopPrice()) {
-                    MatchResult sellMatchResult = security.triggerOrder(stopLimitOrder, matcher);
-                    triggered_order = true;
-                    if (sellMatchResult.outcome() == MatchingOutcome.EXECUTED)
-                        eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
-                    else if (sellMatchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
-                        eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(), List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
-                        return;
-                    } else if (sellMatchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
-                        eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(), List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
-                        return;
-                    }
-                    if (!sellMatchResult.trades().isEmpty()) {
-                        eventPublisher.publish(new OrderExecutedEvent(requestID, stopLimitOrder.getOrderId(),
-                                sellMatchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
-                    }
+                if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
+                        security.getLastTradedPrice() <= stopLimitOrder.getStopPrice()) {
+                    ordersToTrigger.add(stopLimitOrder);
+                    has_triggered_orders = true;
+                }
+            }
+
+            for (StopLimitOrder stopLimitOrder : ordersToTrigger) {
+                MatchResult matchResult = security.triggerOrder(stopLimitOrder, matcher);
+
+                if (matchResult.outcome() == MatchingOutcome.EXECUTED) {
+                    eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
+                } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
+                    eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(),
+                            List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
+                } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
+                    eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(),
+                            List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
+                }
+                if (!matchResult.trades().isEmpty()) {
+                    eventPublisher.publish(new OrderExecutedEvent(requestID, stopLimitOrder.getOrderId(),
+                            matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
                 }
             }
         }
     }
+
     public void handleEnterOrder(EnterOrderRq enterOrderRq) {
         try {
             validateEnterOrderRq(enterOrderRq);

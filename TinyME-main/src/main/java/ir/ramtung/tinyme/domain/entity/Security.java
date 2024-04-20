@@ -59,6 +59,7 @@ public class Security {
         if (order.getSide() == Side.BUY) {
             order.getBroker().increaseCreditBy(order.getValue());
         }
+        order.activate();
         Order originalOrder = order.snapshot();
         order.markAsNew();
 
@@ -70,7 +71,6 @@ public class Security {
                 originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
             }
         }
-        order.activate();
         lastTradedPrice = matchResult.getLastTradedPrice();
         return matchResult;
     }

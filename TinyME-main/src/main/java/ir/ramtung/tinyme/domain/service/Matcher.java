@@ -18,8 +18,6 @@ public class Matcher {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
                 break;
-            if (!matchingOrder.canTrade())
-                continue;
 
             Trade trade = new Trade(newOrder.getSecurity(), matchingOrder.getPrice(),
                     Math.min(newOrder.getQuantity(), matchingOrder.getQuantity()), newOrder, matchingOrder);
