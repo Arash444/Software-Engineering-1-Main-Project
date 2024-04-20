@@ -35,7 +35,7 @@ public class Matcher {
 
             if (newOrder.getQuantity() >= matchingOrder.getQuantity()) {
                 newOrder.decreaseQuantity(matchingOrder.getQuantity());
-                orderBook.removeFirst(matchingOrder.getSide());
+                orderBook.removeByOrderId(matchingOrder.getSide(), matchingOrder.getOrderId());
                 if (matchingOrder instanceof IcebergOrder icebergOrder) {
                     icebergOrder.decreaseQuantity(matchingOrder.getQuantity());
                     icebergOrder.replenish();
