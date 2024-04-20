@@ -72,103 +72,123 @@ public class StopLimitOrderTest {
 
         brokerRepository.addBroker(buy_broker);
         brokerRepository.addBroker(sell_broker);
-        orders = Arrays.asList(
-                new StopLimitOrder(11, security, BUY, 200, 15900, buy_broker, shareholder, 15600),
-                new Order(1, security, BUY, 304, 15700, buy_broker, shareholder, 0),
-                new Order(2, security, BUY, 43, 15500, buy_broker, shareholder, 0),
-                new Order(3, security, BUY, 445, 15450, buy_broker, shareholder, 0),
-                new Order(4, security, BUY, 526, 15450, buy_broker, shareholder, 0),
-                new Order(5, security, BUY, 1000, 15400, buy_broker, shareholder, 0),
-                new Order(6, security, Side.SELL, 350, 15800, sell_broker, shareholder, 0),
-                new Order(7, security, Side.SELL, 285, 15810, sell_broker, shareholder, 0),
-                new Order(8, security, Side.SELL, 800, 15810, sell_broker, shareholder, 0),
-                new Order(9, security, Side.SELL, 340, 15820, sell_broker, shareholder, 0),
-                new Order(10, security, Side.SELL, 65, 15820, sell_broker, shareholder, 0),
-                new StopLimitOrder(12, security, SELL, 200, 15850, sell_broker, shareholder, 15400)
-        );
-        orders.forEach(order -> security.getOrderBook().enqueue(order));
+        //orders = Arrays.asList(
+        //        new StopLimitOrder(11, security, BUY, 200, 15900, buy_broker, shareholder, 15600),
+        //        new Order(1, security, BUY, 304, 15700, buy_broker, shareholder, 0),
+        //        new Order(2, security, BUY, 43, 15500, buy_broker, shareholder, 0),
+        //        new Order(3, security, BUY, 445, 15450, buy_broker, shareholder, 0),
+        //        new Order(4, security, BUY, 526, 15450, buy_broker, shareholder, 0),
+        //        new Order(5, security, BUY, 1000, 15400, buy_broker, shareholder, 0),
+        //        new Order(6, security, Side.SELL, 350, 15800, sell_broker, shareholder, 0),
+        //        new Order(7, security, Side.SELL, 285, 15810, sell_broker, shareholder, 0),
+        //        new Order(8, security, Side.SELL, 800, 15810, sell_broker, shareholder, 0),
+        //        new Order(9, security, Side.SELL, 340, 15820, sell_broker, shareholder, 0),
+        //        new Order(10, security, Side.SELL, 65, 15820, sell_broker, shareholder, 0),
+        //        new StopLimitOrder(12, security, SELL, 200, 15850, sell_broker, shareholder, 15400)
+        //);
+        //orders.forEach(order -> security.getOrderBook().enqueue(order));
     }
 
     @Test
-    void new_order_triggers_stop_limit_order_and_trades() {
-        StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(11, security, BUY, 200, 15800,
+    void new_order_triggers_buy_stop_limit_order_and_trades_partially_validate_events() {
+        StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
                 buy_broker, shareholder, 15700);
-        Order matchingSellOrder = new Order(6, security, Side.SELL, 350, 15800, sell_broker,
+        Order matchingSellOrder = new Order(2, security, Side.SELL, 350, 15800, sell_broker,
                 shareholder, 0);
-        StopLimitOrder matchingSellOrder1 = new StopLimitOrder(200, security, SELL, 300, 15600,
-                sell_broker, shareholder, 0);
-        Order matchingBuyOrder= new Order(1, security, BUY, 304, 15700, buy_broker, shareholder,
+        Order matchingBuyOrder= new Order(3, security, BUY, 304, 15700, buy_broker, shareholder,
                 0);
-
+        security.getOrderBook().enqueue(matchingStopLimitOrder);
+        security.getOrderBook().enqueue(matchingSellOrder);
+        security.getOrderBook().enqueue(matchingBuyOrder);
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
-                200, LocalDateTime.now(), Side.SELL, 300, 15600,
+                4, LocalDateTime.now(), Side.SELL, 300, 15600,
                 sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
+        Order matchingSellOrderNew = new Order(4, security, SELL, 300, 15600,
+                sell_broker, shareholder, 0);
 
-        Trade trade2 = new Trade(security, matchingStopLimitOrder.getPrice(), matchingStopLimitOrder.getQuantity(),
+        Trade trade2 = new Trade(security, 15800, 350,
                 matchingStopLimitOrder, matchingSellOrder);
 
-        Trade trade1 = new Trade(security, matchingBuyOrder.getPrice(), matchingSellOrder1.getQuantity(),
-                matchingBuyOrder, matchingSellOrder1);
+        Trade trade1 = new Trade(security, 15700, 300,
+                matchingBuyOrder, matchingSellOrderNew);
 
-        verify(eventPublisher).publish((new OrderAcceptedEvent(1, 200)));
-        verify(eventPublisher).publish(new OrderExecutedEvent(1, 200, List.of(new TradeDTO(trade1))));
-        verify(eventPublisher).publish((new OrderActivatedEvent(1, 11)));
-        verify(eventPublisher).publish(new OrderExecutedEvent(1, 11, List.of(new TradeDTO(trade2))));
+        verify(eventPublisher).publish((new OrderAcceptedEvent(1, 4)));
+        verify(eventPublisher).publish(new OrderExecutedEvent(1, 4, List.of(new TradeDTO(trade1))));
+        verify(eventPublisher).publish((new OrderActivatedEvent(1, 1)));
+        verify(eventPublisher).publish(new OrderExecutedEvent(1, 1, List.of(new TradeDTO(trade2))));
     }
-
     @Test
-    void new_order_triggers_stop_limit_order() {
-        StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(11, security, BUY, 200, 15800,
+    void new_order_triggers_buy_stop_limit_order_matches_with_sell_partially_check_credit() {
+        StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
                 buy_broker, shareholder, 15700);
-        Order matchingSellOrder = new Order(6, security, Side.SELL, 350, 15800, sell_broker,
+        Order matchingSellOrder = new Order(2, security, Side.SELL, 350, 15800, sell_broker,
                 shareholder, 0);
-        StopLimitOrder matchingSellOrder1 = new StopLimitOrder(200, security, SELL, 300, 15600,
-                sell_broker, shareholder, 0);
-        Order matchingBuyOrder= new Order(1, security, BUY, 304, 15700, buy_broker, shareholder,
+        Order matchingBuyOrder= new Order(3, security, BUY, 304, 15700, buy_broker, shareholder,
                 0);
-
+        security.getOrderBook().enqueue(matchingStopLimitOrder);
+        security.getOrderBook().enqueue(matchingSellOrder);
+        security.getOrderBook().enqueue(matchingBuyOrder);
 
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
-                200, LocalDateTime.now(), Side.SELL, 300, 15600,
+                4, LocalDateTime.now(), Side.SELL, 300, 15600,
                 sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
-        verify(eventPublisher).publish((new OrderAcceptedEvent(1, 200)));
-        verify(eventPublisher).publish((new OrderActivatedEvent(1, 11)));
+        int new_sell_credit = 100000000 +  (15700 * 300) + (15800 * 350) ;
+        assertThat(sell_broker.getCredit()).isEqualTo(new_sell_credit);
+        int new_buy_credit = 100000000 + (400 * 15900) - (15800 * 350) - (50 * 15900);
+        assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
     }
-
     @Test
-    void new_order_triggers_stop_limit_order_and_trades_and_check_credit_after_trade() {
-        StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(11, security, BUY, 200, 15800,
-                buy_broker, shareholder, 15700);
-        Order matchingSellOrder = new Order(6, security, Side.SELL, 350, 15800, sell_broker,
+    void new_order_triggers_sell_stop_limit_order_validate_events() {
+        Order buyOrder = new Order(2, security, BUY, 350, 15100, buy_broker,
                 shareholder, 0);
-        StopLimitOrder matchingSellOrder1 = new StopLimitOrder(200, security, SELL, 300, 15600,
+        Order sellOrder = new Order(3, security, SELL, 300, 15300,
                 sell_broker, shareholder, 0);
-        Order matchingBuyOrder= new Order(1, security, BUY, 304, 15700, buy_broker, shareholder,
-                0);
-
-
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, SELL, 300, 15000,
+                sell_broker, shareholder, 15500);
+        security.getOrderBook().enqueue(stopLimitOrder);
+        security.getOrderBook().enqueue(buyOrder);
+        security.getOrderBook().enqueue(sellOrder);
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
-                200, LocalDateTime.now(), Side.SELL, 300, 15600,
-                sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                4, LocalDateTime.now(), Side.BUY, 300, 15400,
+                buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 0));
+        Order newBuyOrder = new Order(4, security, BUY, 200, 15000,
+                buy_broker, shareholder, 15500);
+
+        Trade trade1 = new Trade(security, 15300, 300,
+                newBuyOrder, sellOrder);
+
+        Trade trade2 = new Trade(security, 15100, 300,
+                stopLimitOrder, buyOrder);
+
+        verify(eventPublisher).publish((new OrderAcceptedEvent(1, 4)));
+        verify(eventPublisher).publish(new OrderExecutedEvent(1, 4, List.of(new TradeDTO(trade1))));
+        verify(eventPublisher).publish((new OrderActivatedEvent(1, 1)));
+        verify(eventPublisher).publish(new OrderExecutedEvent(1, 1, List.of(new TradeDTO(trade2))));
+    }
+    @Test
+    void new_order_triggers_sell_stop_limit_order_check_credit() {
+        Order buyOrder = new Order(2, security, BUY, 350, 15100, buy_broker,
+                shareholder, 0);
+        Order sellOrder = new Order(3, security, SELL, 300, 15300,
+                sell_broker, shareholder, 0);
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, SELL, 300, 15000,
+                sell_broker, shareholder, 15500);
+        security.getOrderBook().enqueue(stopLimitOrder);
+        security.getOrderBook().enqueue(buyOrder);
+        security.getOrderBook().enqueue(sellOrder);
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                4, LocalDateTime.now(), Side.BUY, 300, 15400,
+                buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
-        Trade trade2 = new Trade(security, matchingStopLimitOrder.getPrice(), matchingStopLimitOrder.getQuantity(),
-                matchingStopLimitOrder, matchingSellOrder);
-
-        Trade trade1 = new Trade(security, matchingBuyOrder.getPrice(), matchingSellOrder1.getQuantity(),
-                matchingBuyOrder, matchingSellOrder1);
-
-        verify(eventPublisher).publish((new OrderAcceptedEvent(1, 200)));
-        verify(eventPublisher).publish((new OrderActivatedEvent(1, 11)));
-
-        int sell_credit = 100000000 +  (matchingBuyOrder.getPrice() * matchingSellOrder1.getQuantity()) + (matchingStopLimitOrder.getPrice() * matchingStopLimitOrder.getQuantity()) ;
-        assertThat(sell_broker.getCredit()).isEqualTo(sell_credit);
-
-
+        int new_sell_credit = 100000000 + (15300 * 300) + (300 * 15100);
+        assertThat(sell_broker.getCredit()).isEqualTo(new_sell_credit);
+        int new_buy_credit = 100000000 - 15300 * 300;
+        assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
     }
-
 }
