@@ -33,7 +33,7 @@ public class Matcher {
             }
             trade.increaseSellersCredit();
             trades.add(trade);
-            last_traded_price = Math.max(last_traded_price, matchingOrder.getPrice());
+            last_traded_price = matchingOrder.getPrice();
 
             if (newOrder.getQuantity() >= matchingOrder.getQuantity()) {
                 newOrder.decreaseQuantity(matchingOrder.getQuantity());
