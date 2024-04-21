@@ -63,12 +63,12 @@ public class StopLimitOrderTest {
         shareholder.incPosition(security, 100_000);
         shareholderRepository.addShareholder(shareholder);
 
-        sell_broker = Broker.builder().brokerId(1).build();
-        buy_broker = Broker.builder().brokerId(2).build();
-        sell_broker.increaseCreditBy(100_000_000L);
+        buy_broker = Broker.builder().brokerId(1).build();
+        sell_broker = Broker.builder().brokerId(2).build();
         buy_broker.increaseCreditBy(100_000_000L);
-        brokerRepository.addBroker(sell_broker);
+        sell_broker.increaseCreditBy(100_000_000L);
         brokerRepository.addBroker(buy_broker);
+        brokerRepository.addBroker(sell_broker);
     }
 
     @Test
@@ -160,17 +160,17 @@ public class StopLimitOrderTest {
                 sell_broker, shareholder, 0);
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, SELL, 300, 15000,
                 sell_broker, shareholder, 15400);
-        security.getOrderBook().enqueue(buyOrder);
         security.getOrderBook().enqueue(stopLimitOrder);
+        security.getOrderBook().enqueue(buyOrder);
         security.getOrderBook().enqueue(sellOrder);
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
-                4, LocalDateTime.now(), Side.BUY, 300, 15200,
+                4, LocalDateTime.now(), Side.BUY, 300, 15400,
                 buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
-        int new_sell_credit = 100000000;
+        int new_sell_credit = 100000000 + (300 * 15300) + 15100 * 300;
         assertThat(sell_broker.getCredit()).isEqualTo(new_sell_credit);
-        int new_buy_credit = 100000000 ;
+        int new_buy_credit = 100000000 - 300 * 15300;
         assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
     }
     @Test
