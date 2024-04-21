@@ -34,7 +34,7 @@ public class OrderHandler {
         this.eventPublisher = eventPublisher;
         this.matcher = matcher;
     }
-    public List<StopLimitOrder> findTriggeredOrders(Security security) {
+    private List<StopLimitOrder> findTriggeredOrders(Security security) {
         List<StopLimitOrder> ordersToTrigger = new LinkedList<>();
 
         List<StopLimitOrder> buyOrdersToTrigger = new LinkedList<>();
@@ -61,7 +61,7 @@ public class OrderHandler {
         ordersToTrigger.addAll(sellOrdersToTrigger);
         return ordersToTrigger;
     }
-    public void handleStopLimitOrderActivation(Security security, long requestID) {
+    private void handleStopLimitOrderActivation(Security security, long requestID) {
         List<StopLimitOrder> ordersToTrigger = findTriggeredOrders(security);
 
         while (!ordersToTrigger.isEmpty()) {
