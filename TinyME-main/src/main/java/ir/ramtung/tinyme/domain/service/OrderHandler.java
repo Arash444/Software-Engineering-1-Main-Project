@@ -66,7 +66,9 @@ public class OrderHandler {
 
         while (!ordersToTrigger.isEmpty()) {
             StopLimitOrder stopLimitOrder = ordersToTrigger.get(0);
-            MatchResult matchResult = security.triggerOrder(stopLimitOrder, matcher);
+            StopLimitOrder originalOrder = (StopLimitOrder) stopLimitOrder.snapshot();
+            MatchResult matchResult = security.triggerOrder(originalOrder, stopLimitOrder, matcher);
+
             if (matchResult.outcome() == MatchingOutcome.EXECUTED) {
                 eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
             } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {

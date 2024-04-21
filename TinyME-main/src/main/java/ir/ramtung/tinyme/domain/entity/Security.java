@@ -58,11 +58,10 @@ public class Security {
             order.getBroker().increaseCreditBy(order.getValue());
         orderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
     }
-    public MatchResult triggerOrder(StopLimitOrder order, Matcher matcher){
+    public MatchResult triggerOrder(StopLimitOrder originalOrder, StopLimitOrder order, Matcher matcher){
         if (order.getSide() == Side.BUY) {
-            order.getBroker().increaseCreditBy(order.getValue());
+            order.getBroker().increaseCreditBy(originalOrder.getValue());
         }
-        StopLimitOrder originalOrder = (StopLimitOrder) order.snapshot();
         order.activate();
         order.markAsNew();
 
@@ -101,18 +100,19 @@ public class Security {
                 orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
             return MatchResult.notEnoughPositions(lastTradedPrice);
 
-        order.updateFromRequest(updateOrderRq);
-        if (!order.canTrade() && (order instanceof StopLimitOrder stopLimitOrder) && stopLimitOrder.checkStopPriceReached(lastTradedPrice))
-            return triggerOrder(stopLimitOrder, matcher);
-
         boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
                 || updateOrderRq.getPrice() != order.getPrice()
                 || ((order instanceof IcebergOrder icebergOrder) && (icebergOrder.getPeakSize() < updateOrderRq.getPeakSize()));
 
-        if (updateOrderRq.getSide() == Side.BUY) {
-            order.getBroker().increaseCreditBy(order.getValue());
-        }
         Order originalOrder = order.snapshot();
+        order.updateFromRequest(updateOrderRq);
+
+        if (!order.canTrade() && (order instanceof StopLimitOrder stopLimitOrder) && stopLimitOrder.checkStopPriceReached(lastTradedPrice))
+            return triggerOrder((StopLimitOrder) originalOrder, stopLimitOrder, matcher);
+
+        if (updateOrderRq.getSide() == Side.BUY) {
+            order.getBroker().increaseCreditBy(originalOrder.getValue());
+        }
         if (!losesPriority) {
             if (updateOrderRq.getSide() == Side.BUY) {
                 order.getBroker().decreaseCreditBy(order.getValue());

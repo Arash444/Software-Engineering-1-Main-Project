@@ -452,6 +452,26 @@ public class StopLimitOrderTest {
     }
     @Test
     void
+    update_buy_stop_limit_order_change_stop_price_activates_with_trade_almost_0_broker_credit_check_credit()
+    {
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 400, 15500,
+                buy_broker, shareholder, 50000);
+        Order matchedSellOrder = new Order(2, security, Side.SELL, 500, 5450,
+                sell_broker, shareholder, 0);
+        security.getOrderBook().enqueue(stopLimitOrder);
+        security.getOrderBook().enqueue(matchedSellOrder);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, security.getIsin(), 1,
+                LocalDateTime.now(), Side.BUY, 7000, 15500, buy_broker.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 10000));
+
+        int new_sell_credit = 100000000 + 500 * 5450;
+        assertThat(sell_broker.getCredit()).isEqualTo(new_sell_credit);
+        int new_buy_credit = 100000000 + 400 * 15500 - 5450 * 500 - 6500 * 15500;
+        assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
+    }
+    @Test
+    void
     update_buy_stop_limit_order_change_stop_price_activates_no_trade()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
