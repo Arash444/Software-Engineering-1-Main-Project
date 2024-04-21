@@ -33,43 +33,44 @@ public class OrderHandler {
         this.eventPublisher = eventPublisher;
         this.matcher = matcher;
     }
+    public List<StopLimitOrder> findTriggeredOrders(Security security) {
+        List<StopLimitOrder> ordersToTrigger = new LinkedList<>();
+        for (Order order : security.getOrderBook().getBuyQueue()) {
+            if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
+                    security.getLastTradedPrice() >= stopLimitOrder.getStopPrice()) {
+                ordersToTrigger.add(stopLimitOrder);
+            }
+        }
+        for (Order order : security.getOrderBook().getSellQueue()) {
+            if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
+                    security.getLastTradedPrice() <= stopLimitOrder.getStopPrice()) {
+                ordersToTrigger.add(stopLimitOrder);
+            }
+        }
+        return ordersToTrigger;
+    }
     public void handleStopLimitOrderActivation(Security security, long requestID) {
-        boolean has_triggered_orders = true;
-        while(has_triggered_orders){
-            has_triggered_orders = false;
-            List<StopLimitOrder> ordersToTrigger = new LinkedList<>();
-            for (Order order : security.getOrderBook().getBuyQueue()) {
-                if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
-                        security.getLastTradedPrice() >= stopLimitOrder.getStopPrice()) {
-                    ordersToTrigger.add(stopLimitOrder);
-                    has_triggered_orders = true;
-                }
-            }
-            for (Order order : security.getOrderBook().getSellQueue()) {
-                if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
-                        security.getLastTradedPrice() <= stopLimitOrder.getStopPrice()) {
-                    ordersToTrigger.add(stopLimitOrder);
-                    has_triggered_orders = true;
-                }
-            }
+        List<StopLimitOrder> ordersToTrigger = findTriggeredOrders(security);
 
-            for (StopLimitOrder stopLimitOrder : ordersToTrigger) {
-                MatchResult matchResult = security.triggerOrder(stopLimitOrder, matcher);
-
-                if (matchResult.outcome() == MatchingOutcome.EXECUTED) {
-                    eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
-                } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
-                    eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(),
-                            List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
-                } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
-                    eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(),
-                            List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
-                }
-                if (!matchResult.trades().isEmpty()) {
-                    eventPublisher.publish(new OrderExecutedEvent(requestID, stopLimitOrder.getOrderId(),
-                            matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
-                }
+        while (!ordersToTrigger.isEmpty()) {
+            StopLimitOrder stopLimitOrder = ordersToTrigger.get(0);
+            MatchResult matchResult = security.triggerOrder(stopLimitOrder, matcher);
+            if (matchResult.outcome() == MatchingOutcome.EXECUTED) {
+                eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
+            } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
+                eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(),
+                        List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
+            } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
+                eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(),
+                        List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
             }
+            if (!matchResult.trades().isEmpty()) {
+                eventPublisher.publish(new OrderExecutedEvent(requestID, stopLimitOrder.getOrderId(),
+                        matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
+                List<StopLimitOrder> newOrdersToTrigger = findTriggeredOrders(security);
+                ordersToTrigger.addAll(newOrdersToTrigger);
+            }
+            ordersToTrigger.remove(0);
         }
     }
 
