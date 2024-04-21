@@ -311,5 +311,42 @@ public class StopLimitOrderTest {
         assertThat(sell_broker.getCredit()).isEqualTo(new_sell_credit);
         assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
     }
-    //reject test buyer
+
+    @Test
+    void new_order_triggers_stop_limit_order_which_triggers_another_stop_limit_order_check_rejection() {
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                1, LocalDateTime.now(), Side.BUY, 1000000, 15800000,
+                buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 100));
+
+        verify(eventPublisher).publish(new OrderRejectedEvent(1, 1, List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
+    }
+
+    @Test
+    void new_order_triggers_stop_limit_order_which_triggers_another_stop_limit_order_check_rejection2() {
+        StopLimitOrder firstStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
+                buy_broker, shareholder, 15500);
+
+        StopLimitOrder secondStopLimitOrder = new StopLimitOrder(2, security, BUY, 400, 15900,
+                buy_broker, shareholder, 15900);
+
+        Order firstMatchingSellOrder = new Order(3, security, Side.SELL, 5, 15800, sell_broker,
+                shareholder, 0);
+
+        Order sencondMatchingSellOrder = new Order(4, security, Side.SELL, 5, 15900, sell_broker,
+                shareholder, 0);
+
+        security.getOrderBook().enqueue(firstStopLimitOrder);
+        security.getOrderBook().enqueue(secondStopLimitOrder);
+        security.getOrderBook().enqueue(firstMatchingSellOrder);
+        security.getOrderBook().enqueue(sencondMatchingSellOrder);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                5, LocalDateTime.now(), Side.BUY, 1000000, 15800000,
+                buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 100));
+
+        verify(eventPublisher).publish(new OrderRejectedEvent(1, 5, List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
+    }
+
 }
