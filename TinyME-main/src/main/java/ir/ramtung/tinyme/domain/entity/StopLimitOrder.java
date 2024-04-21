@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public class StopLimitOrder extends Order{
     private int stopPrice;
     private boolean hasBeenTriggered;
+    private boolean hasBeenActivatedOnArrival;
 
     public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker,
                           Shareholder shareholder, LocalDateTime entryTime, OrderStatus status, int stopPrice) {
@@ -61,18 +62,22 @@ public class StopLimitOrder extends Order{
         stopPrice = updateOrderRq.getStopPrice();
 }
 
-    public void checkStopPriceReached(int last_traded_price){
+    public void checkStopPriceReachedOnArrival(int last_traded_price){
         if (this.getSide() == Side.BUY && last_traded_price >= stopPrice){
+            hasBeenActivatedOnArrival = true;
             hasBeenTriggered = true;
         }
         else if (this.getSide() == Side.SELL && last_traded_price <= stopPrice){
+            hasBeenActivatedOnArrival = true;
             hasBeenTriggered = true;
         }
     }
 
+    public void deactivateOnArrivalBool(){ hasBeenActivatedOnArrival = false; }
     @Override
     public boolean canTrade(){ return hasBeenTriggered; }
     public boolean hasBeenTriggered(){ return hasBeenTriggered; }
+    public boolean hasBeenActivatedOnArrival(){ return hasBeenActivatedOnArrival; }
 
     public void activate() { hasBeenTriggered = true; }
 

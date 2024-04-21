@@ -116,10 +116,19 @@ public class OrderHandler {
                 eventPublisher.publish(new OrderAcceptedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
             else
                 eventPublisher.publish(new OrderUpdatedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
+            if (enterOrderRq.getStopPrice() != 0)
+            {
+                StopLimitOrder stopLimitOrder = (StopLimitOrder) security.getOrderBook().
+                        findByOrderId(enterOrderRq.getSide(), enterOrderRq.getOrderId());
+                if (stopLimitOrder.hasBeenActivatedOnArrival())
+                {
+                    eventPublisher.publish(new OrderActivatedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
+                    stopLimitOrder.deactivateOnArrivalBool();
+                }
+            }
             if (!matchResult.trades().isEmpty()) {
                 eventPublisher.publish(new OrderExecutedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
             }
-
             handleStopLimitOrderActivation(security, enterOrderRq.getRequestId());
 
         } catch (InvalidRequestException ex) {

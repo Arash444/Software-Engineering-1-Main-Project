@@ -37,7 +37,7 @@ public class Security {
             StopLimitOrder stopLimitOrder = new StopLimitOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
                     enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
                     enterOrderRq.getStopPrice());
-            stopLimitOrder.checkStopPriceReached(lastTradedPrice);
+            stopLimitOrder.checkStopPriceReachedOnArrival(lastTradedPrice);
             order = stopLimitOrder;
         }
         else
