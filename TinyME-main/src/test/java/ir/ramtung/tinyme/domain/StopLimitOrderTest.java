@@ -46,12 +46,9 @@ public class StopLimitOrderTest {
     @Autowired
     ShareholderRepository shareholderRepository;
     private Security security;
-    private Broker sell_broker, buy_broker;
     private Shareholder shareholder;
-    private OrderBook orderBook;
-    private List<Order> orders;
-    @Autowired
-    private Matcher matcher;
+    private Broker buy_broker;
+    private Broker sell_broker;
 
     @BeforeEach
     void setupOrderBook() {
@@ -66,26 +63,12 @@ public class StopLimitOrderTest {
         shareholder.incPosition(security, 100_000);
         shareholderRepository.addShareholder(shareholder);
 
-        buy_broker = Broker.builder().credit(100_000_000L).build();
-        sell_broker = Broker.builder().credit(100_000_000L).build();
-
+        buy_broker = Broker.builder().brokerId(1).build();
+        sell_broker = Broker.builder().brokerId(2).build();
+        buy_broker.increaseCreditBy(100_000_000L);
+        sell_broker.increaseCreditBy(100_000_000L);
         brokerRepository.addBroker(buy_broker);
         brokerRepository.addBroker(sell_broker);
-        //orders = Arrays.asList(
-        //        new StopLimitOrder(11, security, BUY, 200, 15900, buy_broker, shareholder, 15600),
-        //        new Order(1, security, BUY, 304, 15700, buy_broker, shareholder, 0),
-        //        new Order(2, security, BUY, 43, 15500, buy_broker, shareholder, 0),
-        //        new Order(3, security, BUY, 445, 15450, buy_broker, shareholder, 0),
-        //        new Order(4, security, BUY, 526, 15450, buy_broker, shareholder, 0),
-        //        new Order(5, security, BUY, 1000, 15400, buy_broker, shareholder, 0),
-        //        new Order(6, security, Side.SELL, 350, 15800, sell_broker, shareholder, 0),
-        //        new Order(7, security, Side.SELL, 285, 15810, sell_broker, shareholder, 0),
-        //        new Order(8, security, Side.SELL, 800, 15810, sell_broker, shareholder, 0),
-        //        new Order(9, security, Side.SELL, 340, 15820, sell_broker, shareholder, 0),
-        //        new Order(10, security, Side.SELL, 65, 15820, sell_broker, shareholder, 0),
-        //        new StopLimitOrder(12, security, SELL, 200, 15850, sell_broker, shareholder, 15400)
-        //);
-        //orders.forEach(order -> security.getOrderBook().enqueue(order));
     }
 
     @Test
@@ -177,17 +160,17 @@ public class StopLimitOrderTest {
                 sell_broker, shareholder, 0);
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, SELL, 300, 15000,
                 sell_broker, shareholder, 15400);
-        security.getOrderBook().enqueue(buyOrder);
         security.getOrderBook().enqueue(stopLimitOrder);
+        security.getOrderBook().enqueue(buyOrder);
         security.getOrderBook().enqueue(sellOrder);
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
-                4, LocalDateTime.now(), Side.BUY, 300, 15200,
+                4, LocalDateTime.now(), Side.BUY, 300, 15400,
                 buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
-        int new_sell_credit = 100000000;
+        int new_sell_credit = 100000000 + (300 * 15300) + 15100 * 300;
         assertThat(sell_broker.getCredit()).isEqualTo(new_sell_credit);
-        int new_buy_credit = 100000000 ;
+        int new_buy_credit = 100000000 - 300 * 15300;
         assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
     }
     @Test
