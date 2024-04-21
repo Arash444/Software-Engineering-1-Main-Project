@@ -101,11 +101,9 @@ public class Security {
                 orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
             return MatchResult.notEnoughPositions(lastTradedPrice);
 
+        order.updateFromRequest(updateOrderRq);
         if (!order.canTrade() && (order instanceof StopLimitOrder stopLimitOrder) && stopLimitOrder.checkStopPriceReached(lastTradedPrice))
-        {
-            stopLimitOrder.updateFromRequest(updateOrderRq);
             return triggerOrder(stopLimitOrder, matcher);
-        }
 
         boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
                 || updateOrderRq.getPrice() != order.getPrice()
@@ -115,7 +113,6 @@ public class Security {
             order.getBroker().increaseCreditBy(order.getValue());
         }
         Order originalOrder = order.snapshot();
-        order.updateFromRequest(updateOrderRq);
         if (!losesPriority) {
             if (updateOrderRq.getSide() == Side.BUY) {
                 order.getBroker().decreaseCreditBy(order.getValue());
