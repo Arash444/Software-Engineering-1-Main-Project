@@ -120,10 +120,10 @@ public class OrderHandler {
             {
                 StopLimitOrder stopLimitOrder = (StopLimitOrder) security.getOrderBook().
                         findByOrderId(enterOrderRq.getSide(), enterOrderRq.getOrderId());
-                if (stopLimitOrder.hasBeenActivatedOnArrival())
+                if (stopLimitOrder.hasJustBeenActivated())
                 {
                     eventPublisher.publish(new OrderActivatedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
-                    stopLimitOrder.deactivateOnArrivalBool();
+                    stopLimitOrder.deactivateJustBeenActivatedBool();
                 }
             }
             if (!matchResult.trades().isEmpty()) {

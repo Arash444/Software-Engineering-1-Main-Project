@@ -37,7 +37,7 @@ public class Security {
             StopLimitOrder stopLimitOrder = new StopLimitOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
                     enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
                     enterOrderRq.getStopPrice());
-            stopLimitOrder.checkStopPriceReachedOnArrival(lastTradedPrice);
+            stopLimitOrder.checkStopPriceReached(lastTradedPrice);
             order = stopLimitOrder;
         }
         else
@@ -62,13 +62,14 @@ public class Security {
         if (order.getSide() == Side.BUY) {
             order.getBroker().increaseCreditBy(order.getValue());
         }
+        StopLimitOrder originalOrder = (StopLimitOrder) order.snapshot();
         order.activate();
-        Order originalOrder = order.snapshot();
         order.markAsNew();
 
         orderBook.removeByOrderId(order.getSide(), order.getOrderId());
         MatchResult matchResult = matcher.execute(order, false);
         if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
+            originalOrder.deactivate();
             orderBook.enqueue(originalOrder);
             if (order.getSide() == Side.BUY) {
                 originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
@@ -99,6 +100,12 @@ public class Security {
                 !order.getShareholder().hasEnoughPositionsOn(this,
                 orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
             return MatchResult.notEnoughPositions(lastTradedPrice);
+
+        if (!order.canTrade() && (order instanceof StopLimitOrder stopLimitOrder) && stopLimitOrder.checkStopPriceReached(lastTradedPrice))
+        {
+            stopLimitOrder.updateFromRequest(updateOrderRq);
+            return triggerOrder(stopLimitOrder, matcher);
+        }
 
         boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
                 || updateOrderRq.getPrice() != order.getPrice()

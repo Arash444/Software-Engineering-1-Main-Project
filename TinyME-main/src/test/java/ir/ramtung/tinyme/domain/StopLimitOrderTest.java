@@ -410,7 +410,7 @@ public class StopLimitOrderTest {
     void
     update_buy_stop_limit_order_change_stop_price_activates_with_trade_check_events()
     {
-        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 400, 15500,
                 buy_broker, shareholder, 50000);
         Order matchedSellOrder = new Order(2, security, Side.SELL, 500, 15450,
                 sell_broker, shareholder, 0);
@@ -434,7 +434,7 @@ public class StopLimitOrderTest {
     void
     update_buy_stop_limit_order_change_stop_price_activates_with_trade_check_credit()
     {
-        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 400, 15500,
                 buy_broker, shareholder, 50000);
         Order matchedSellOrder = new Order(2, security, Side.SELL, 200, 15450,
                 sell_broker, shareholder, 0);
@@ -447,7 +447,7 @@ public class StopLimitOrderTest {
 
         int new_sell_credit = 100000000 + 200 * 15450;
         assertThat(sell_broker.getCredit()).isEqualTo(new_sell_credit);
-        int new_buy_credit = 100000000 + 300 * 15500 - 15450 * 200 - 100 * 15500;
+        int new_buy_credit = 100000000 + 400 * 15500 - 15450 * 200 - 100 * 15500;
         assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
     }
     @Test
@@ -477,16 +477,19 @@ public class StopLimitOrderTest {
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
                 buy_broker, shareholder, 50000);
+        Order matchedSellOrder = new Order(2, security, Side.SELL, 200, 15450,
+                sell_broker, shareholder, 0);
         security.getOrderBook().enqueue(stopLimitOrder);
+        security.getOrderBook().enqueue(matchedSellOrder);
 
         orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, security.getIsin(), 1,
-                LocalDateTime.now(), Side.BUY, 300, 15500, buy_broker.getBrokerId(),
+                LocalDateTime.now(), Side.BUY, 300, 155000, buy_broker.getBrokerId(),
                 shareholder.getShareholderId(), 0, 0, 20000));
 
         InOrder inOrder = inOrder(eventPublisher);
         inOrder.verify(eventPublisher).publish(new OrderUpdatedEvent(1, 1));
-        inOrder.verifyNoMoreInteractions();
-        assertThat(buy_broker.getCredit()).isEqualTo(100000000);
+        int new_buy_credit = 100000000 + 300 * 15500 - 300 * 155000;
+        assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
     }
     @Test
     void
@@ -520,6 +523,19 @@ public class StopLimitOrderTest {
         inOrder.verifyNoMoreInteractions();
         int new_buy_credit = 100000000 + 300 * 15500;
         assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
+    }
+    @Test
+    void delete_stop_limit_sell_order_deletes_successfully() {
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.SELL, 300, 15500,
+                sell_broker, shareholder, 50000);
+        security.getOrderBook().enqueue(stopLimitOrder);
+
+        orderHandler.handleDeleteOrder(new DeleteOrderRq(1, security.getIsin(), Side.SELL, 1));
+
+        InOrder inOrder = inOrder(eventPublisher);
+        inOrder.verify(eventPublisher).publish(new OrderDeletedEvent(1, 1));
+        inOrder.verifyNoMoreInteractions();
+        assertThat(sell_broker.getCredit()).isEqualTo(100000000);
     }
     @Test
     void new_order_triggers_two_sell_orders_each_trigger_two_check_order_of_events() {
