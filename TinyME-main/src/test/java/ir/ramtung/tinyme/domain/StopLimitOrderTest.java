@@ -642,4 +642,89 @@ public class StopLimitOrderTest {
         inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 6));
         inOrder.verifyNoMoreInteractions();
     }
+
+
+    @Test
+    void update_order_triggers_two_sell_orders_each_trigger_two_check_order_of_events() {
+        List<Order> orders = Arrays.asList(
+                new Order(1, security, BUY, 10, 15900, buy_broker, shareholder, 0),
+                new Order(2, security, BUY, 50, 15750, buy_broker, shareholder, 0),
+                new Order(3, security, BUY, 50, 15700, buy_broker, shareholder, 0),
+                new StopLimitOrder(4, security, SELL, 50, 14750, sell_broker, shareholder, 15800),
+                new StopLimitOrder(5, security, SELL, 50, 14810, sell_broker, shareholder, 15900),
+                new StopLimitOrder(6, security, SELL, 50, 14850, sell_broker, shareholder, 15740),
+                new StopLimitOrder(7, security, SELL, 50, 14900, sell_broker, shareholder, 15970),
+                new StopLimitOrder(8, security, SELL, 50, 15000, sell_broker, shareholder, 15700),
+                new StopLimitOrder(9, security, SELL, 50, 15500, sell_broker, shareholder, 15850),
+                new Order(10, security, SELL, 10, 16850, sell_broker, shareholder, 0)
+        );
+        orders.forEach(order -> security.getOrderBook().enqueue(order));
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, security.getIsin(),
+                10, LocalDateTime.now(), SELL, 10, 15850,
+                sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 0));
+
+        Trade trade1 = new Trade(security, 15900, 10,
+                orders.get(9), orders.get(0));
+        Trade trade2 = new Trade(security, 15750, 50,
+                orders.get(6), orders.get(1));
+        Trade trade3 = new Trade(security, 15700, 50,
+                orders.get(4), orders.get(2));
+
+        InOrder inOrder = inOrder(eventPublisher);
+        inOrder.verify(eventPublisher).publish(new OrderUpdatedEvent(1, 10));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 10, List.of(new TradeDTO(trade1))));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 7));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 7, List.of(new TradeDTO(trade2))));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 5));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 5, List.of(new TradeDTO(trade3))));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 9));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 4));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 6));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 8));
+        inOrder.verifyNoMoreInteractions();
+    }
+
+    @Test
+    void update_order_triggers_two_buy_orders_each_trigger_two_check_order_of_events() {
+        List<Order> orders = Arrays.asList(
+                new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820),
+                new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950),
+                new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810),
+                new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970),
+                new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940),
+                new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980),
+                new Order(7, security, Side.SELL, 10, 15820, sell_broker, shareholder, 0),
+                new Order(8, security, Side.SELL, 50, 15950, sell_broker, shareholder, 0),
+                new Order(9, security, Side.SELL, 50, 16000, sell_broker, shareholder, 0),
+                new Order(10, security, BUY, 10, 17000, buy_broker, shareholder, 0)
+        );
+        orders.forEach(order -> security.getOrderBook().enqueue(order));
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, security.getIsin(),
+                10, LocalDateTime.now(), Side.BUY, 10, 15850,
+                buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 0));
+
+        Trade trade1 = new Trade(security, 15820, 10,
+                orders.get(9), orders.get(6));
+        Trade trade2 = new Trade(security, 15950, 50,
+                orders.get(2), orders.get(7));
+        Trade trade3 = new Trade(security, 16000, 50,
+                orders.get(0), orders.get(8));
+
+        InOrder inOrder = inOrder(eventPublisher);
+        inOrder.verify(eventPublisher).publish(new OrderUpdatedEvent(1, 10));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 10, List.of(new TradeDTO(trade1))));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 3));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 3, List.of(new TradeDTO(trade2))));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 1));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 1, List.of(new TradeDTO(trade3))));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 5));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 2));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 4));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 6));
+        inOrder.verifyNoMoreInteractions();
+    }
 }
