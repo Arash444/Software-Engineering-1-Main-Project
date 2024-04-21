@@ -9,6 +9,7 @@ public final class MatchResult {
     private final Order remainder;
     private final LinkedList<Trade> trades;
     private final int lastTradedPrice;
+    private boolean justBeenActivated;
 
     public static MatchResult executed(Order remainder, List<Trade> trades, int lastTradedPrice) {
         return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), lastTradedPrice);
@@ -28,6 +29,7 @@ public final class MatchResult {
         this.remainder = remainder;
         this.trades = trades;
         this.lastTradedPrice = lastTradedPrice;
+        this.justBeenActivated = false;
 
     }
 
@@ -44,6 +46,10 @@ public final class MatchResult {
     public LinkedList<Trade> trades() {
         return trades;
     }
+
+    public void activate() {justBeenActivated = true;}
+
+    public boolean hasJustBeenActivated() {return justBeenActivated;}
 
     @Override
     public boolean equals(Object obj) {

@@ -37,8 +37,15 @@ public class Security {
             StopLimitOrder stopLimitOrder = new StopLimitOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
                     enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
                     enterOrderRq.getStopPrice());
-            stopLimitOrder.checkStopPriceReached(lastTradedPrice);
             order = stopLimitOrder;
+            if(stopLimitOrder.checkStopPriceReached(lastTradedPrice))
+            {
+                stopLimitOrder.activate();
+                MatchResult matchResult = matcher.execute(order, false);
+                matchResult.activate();
+                lastTradedPrice = matchResult.getLastTradedPrice();;
+                return matchResult;
+            }
         }
         else
             order = new Order(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
@@ -68,7 +75,6 @@ public class Security {
         orderBook.removeByOrderId(order.getSide(), order.getOrderId());
         MatchResult matchResult = matcher.execute(order, false);
         if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
-            originalOrder.deactivate();
             orderBook.enqueue(originalOrder);
             if (order.getSide() == Side.BUY) {
                 originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
@@ -89,7 +95,7 @@ public class Security {
             throw new InvalidRequestException(Message.CANNOT_SPECIFY_PEAK_SIZE_FOR_A_NON_ICEBERG_ORDER);
 
         boolean have_changed_triggered_order_stop_price = order instanceof StopLimitOrder stopLimitOrder
-                && stopLimitOrder.hasBeenTriggered() && (stopLimitOrder.getStopPrice() != updateOrderRq.getStopPrice());
+                && stopLimitOrder.canTrade() && (stopLimitOrder.getStopPrice() != updateOrderRq.getStopPrice());
         boolean have_added_stop_price_to_non_stop_limit_order = !(order instanceof StopLimitOrder)
                 && updateOrderRq.getStopPrice() != 0;
         if (have_added_stop_price_to_non_stop_limit_order || have_changed_triggered_order_stop_price)
@@ -107,8 +113,11 @@ public class Security {
         Order originalOrder = order.snapshot();
         order.updateFromRequest(updateOrderRq);
 
-        if (!order.canTrade() && (order instanceof StopLimitOrder stopLimitOrder) && stopLimitOrder.checkStopPriceReached(lastTradedPrice))
-            return triggerOrder((StopLimitOrder) originalOrder, stopLimitOrder, matcher);
+        if (!order.canTrade() && (order instanceof StopLimitOrder stopLimitOrder) && stopLimitOrder.checkStopPriceReached(lastTradedPrice)) {
+            MatchResult matchResult = triggerOrder((StopLimitOrder) originalOrder, stopLimitOrder, matcher);
+            matchResult.activate();
+            return matchResult;
+        }
 
         if (updateOrderRq.getSide() == Side.BUY) {
             order.getBroker().increaseCreditBy(originalOrder.getValue());

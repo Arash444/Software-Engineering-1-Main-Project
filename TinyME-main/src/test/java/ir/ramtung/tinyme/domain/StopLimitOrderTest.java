@@ -197,7 +197,7 @@ public class StopLimitOrderTest {
                 sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
-        assertThat(matchingStopLimitOrder.hasBeenTriggered()).isTrue();
+        assertThat(matchingStopLimitOrder.canTrade()).isTrue();
 
     }
 
@@ -218,7 +218,7 @@ public class StopLimitOrderTest {
                 sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
-        assertThat(matchingStopLimitOrder.hasBeenTriggered()).isFalse();
+        assertThat(matchingStopLimitOrder.canTrade()).isFalse();
     }
 
     @Test
