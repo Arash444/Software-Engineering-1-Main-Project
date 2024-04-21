@@ -338,5 +338,4 @@ public class StopLimitOrderTest {
 
         verify(eventPublisher).publish(new OrderRejectedEvent(1, 5, List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
     }
-
 }
