@@ -698,7 +698,7 @@ public class StopLimitOrderTest {
                 new Order(7, security, Side.SELL, 10, 15820, sell_broker, shareholder, 0),
                 new Order(8, security, Side.SELL, 50, 15950, sell_broker, shareholder, 0),
                 new Order(9, security, Side.SELL, 50, 16000, sell_broker, shareholder, 0),
-                new Order(10, security, BUY, 10, 17000, buy_broker, shareholder, 0)
+                new Order(10, security, BUY, 10, 15000, buy_broker, shareholder, 0)
         );
         orders.forEach(order -> security.getOrderBook().enqueue(order));
 
@@ -726,5 +726,82 @@ public class StopLimitOrderTest {
         inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 4));
         inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 6));
         inOrder.verifyNoMoreInteractions();
+    }
+
+
+    @Test
+    void new_order_triggers_two_buy_orders_each_trigger_two_check_activation() {
+        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820);
+        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950);
+        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810);
+        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970);
+        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940);
+        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980);
+        Order order7 = new Order(7, security, Side.SELL, 10, 15820, sell_broker, shareholder, 0);
+        Order order8 = new Order(8, security, Side.SELL, 50, 15950, sell_broker, shareholder, 0);
+        Order order9 = new Order(9, security, Side.SELL, 50, 16000, sell_broker, shareholder, 0);
+        security.getOrderBook().enqueue(order1);
+        security.getOrderBook().enqueue(order2);
+        security.getOrderBook().enqueue(order3);
+        security.getOrderBook().enqueue(order4);
+        security.getOrderBook().enqueue(order5);
+        security.getOrderBook().enqueue(order6);
+        security.getOrderBook().enqueue(order7);
+        security.getOrderBook().enqueue(order8);
+        security.getOrderBook().enqueue(order9);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                10, LocalDateTime.now(), Side.BUY, 10, 15850,
+                buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 0));
+
+        assertThat(order1.canTrade()).isTrue();
+        assertThat(order2.canTrade()).isTrue();
+        assertThat(order3.canTrade()).isTrue();
+        assertThat(order4.canTrade()).isTrue();
+        assertThat(order5.canTrade()).isTrue();
+        assertThat(order6.canTrade()).isTrue();
+        assertThat(order7.canTrade()).isTrue();
+        assertThat(order8.canTrade()).isTrue();
+        assertThat(order9.canTrade()).isTrue();
+    }
+    @Test
+    void update_order_triggers_two_buy_orders_each_trigger_two_check_activation() {
+        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820);
+        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950);
+        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810);
+        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970);
+        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940);
+        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980);
+        Order order7 = new Order(7, security, Side.SELL, 10, 15820, sell_broker, shareholder, 0);
+        Order order8 = new Order(8, security, Side.SELL, 50, 15950, sell_broker, shareholder, 0);
+        Order order9 = new Order(9, security, Side.SELL, 50, 16000, sell_broker, shareholder, 0);
+        Order order10 = new Order(10, security, BUY, 10, 15000, buy_broker, shareholder, 0);
+        security.getOrderBook().enqueue(order1);
+        security.getOrderBook().enqueue(order2);
+        security.getOrderBook().enqueue(order3);
+        security.getOrderBook().enqueue(order4);
+        security.getOrderBook().enqueue(order5);
+        security.getOrderBook().enqueue(order6);
+        security.getOrderBook().enqueue(order7);
+        security.getOrderBook().enqueue(order8);
+        security.getOrderBook().enqueue(order9);
+        security.getOrderBook().enqueue(order10);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, security.getIsin(),
+                10, LocalDateTime.now(), Side.BUY, 10, 15850,
+                buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 0));
+
+        assertThat(order1.canTrade()).isTrue();
+        assertThat(order2.canTrade()).isTrue();
+        assertThat(order3.canTrade()).isTrue();
+        assertThat(order4.canTrade()).isTrue();
+        assertThat(order5.canTrade()).isTrue();
+        assertThat(order6.canTrade()).isTrue();
+        assertThat(order7.canTrade()).isTrue();
+        assertThat(order8.canTrade()).isTrue();
+        assertThat(order9.canTrade()).isTrue();
+        assertThat(order10.canTrade()).isTrue();
     }
 }
