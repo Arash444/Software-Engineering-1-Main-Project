@@ -44,7 +44,7 @@ public class OrderHandler {
                 buyOrdersToTrigger.add(stopLimitOrder);
             }
         }
-        buyOrdersToTrigger.sort(Comparator.comparing(StopLimitOrder::getStopPrice).reversed()
+        buyOrdersToTrigger.sort(Comparator.comparing(StopLimitOrder::getStopPrice)
                 .thenComparing(StopLimitOrder::getEntryTime));
 
         List<StopLimitOrder> sellOrdersToTrigger = new LinkedList<>();
