@@ -14,6 +14,7 @@ import ir.ramtung.tinyme.repository.SecurityRepository;
 import ir.ramtung.tinyme.repository.ShareholderRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,18 +36,29 @@ public class OrderHandler {
     }
     public List<StopLimitOrder> findTriggeredOrders(Security security) {
         List<StopLimitOrder> ordersToTrigger = new LinkedList<>();
+
+        List<StopLimitOrder> buyOrdersToTrigger = new LinkedList<>();
         for (Order order : security.getOrderBook().getBuyQueue()) {
             if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
                     security.getLastTradedPrice() >= stopLimitOrder.getStopPrice()) {
-                ordersToTrigger.add(stopLimitOrder);
+                buyOrdersToTrigger.add(stopLimitOrder);
             }
         }
+        buyOrdersToTrigger.sort(Comparator.comparing(StopLimitOrder::getStopPrice).reversed()
+                .thenComparing(StopLimitOrder::getEntryTime));
+
+        List<StopLimitOrder> sellOrdersToTrigger = new LinkedList<>();
         for (Order order : security.getOrderBook().getSellQueue()) {
             if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
                     security.getLastTradedPrice() <= stopLimitOrder.getStopPrice()) {
-                ordersToTrigger.add(stopLimitOrder);
+                sellOrdersToTrigger.add(stopLimitOrder);
             }
         }
+        sellOrdersToTrigger.sort(Comparator.comparing(StopLimitOrder::getStopPrice).reversed()
+                .thenComparing(StopLimitOrder::getEntryTime));
+
+        ordersToTrigger.addAll(buyOrdersToTrigger);
+        ordersToTrigger.addAll(sellOrdersToTrigger);
         return ordersToTrigger;
     }
     public void handleStopLimitOrderActivation(Security security, long requestID) {
