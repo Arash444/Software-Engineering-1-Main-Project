@@ -224,4 +224,50 @@ public class StopLimitOrderTest {
                 Message.CANNOT_CHANGE_STOP_PRICE
         );
     }
+
+    @Test
+    void stop_limit_order_activates_when_price_reaches_stop_for_buy_order() {
+        StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
+                buy_broker, shareholder, 1000);
+        Order matchingSellOrder = new Order(2, security, Side.SELL, 350, 15800, sell_broker,
+                shareholder, 0);
+        Order matchingBuyOrder= new Order(3, security, BUY, 304, 15700, buy_broker, shareholder,
+                0);
+        security.getOrderBook().enqueue(matchingStopLimitOrder);
+        security.getOrderBook().enqueue(matchingSellOrder);
+        security.getOrderBook().enqueue(matchingBuyOrder);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                4, LocalDateTime.now(), Side.SELL, 300, 15600,
+                sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 0));
+        Order matchingSellOrderNew = new Order(4, security, SELL, 300, 15600,
+                sell_broker, shareholder, 0);
+
+        assertThat(matchingStopLimitOrder.hasBeenTriggered()).isTrue();
+
+    }
+
+    @Test
+    void stop_limit_order_does_not_activate_when_price_below_stop_for_sell_order() {
+        StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
+                buy_broker, shareholder, 551554264);
+        Order matchingSellOrder = new Order(2, security, Side.SELL, 350, 15800, sell_broker,
+                shareholder, 0);
+        Order matchingBuyOrder= new Order(3, security, BUY, 304, 15700, buy_broker, shareholder,
+                0);
+        security.getOrderBook().enqueue(matchingStopLimitOrder);
+        security.getOrderBook().enqueue(matchingSellOrder);
+        security.getOrderBook().enqueue(matchingBuyOrder);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                4, LocalDateTime.now(), Side.SELL, 300, 15600,
+                sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 0));
+        Order matchingSellOrderNew = new Order(4, security, SELL, 300, 15600,
+                sell_broker, shareholder, 0);
+
+        assertThat(matchingStopLimitOrder.hasBeenTriggered()).isFalse();
+    }
+
 }
