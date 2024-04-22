@@ -42,26 +42,23 @@ public class OrderBook {
         return null;
     }
 
-    public boolean removeByOrderId(Side side, long orderId) {
+    public void removeByOrderId(Side side, long orderId) {
         var queue = getQueue(side);
         var it = queue.listIterator();
         while (it.hasNext()) {
             if (it.next().getOrderId() == orderId) {
                 it.remove();
-                return true;
+                return;
             }
         }
-        return false;
     }
 
     public Order matchWithFirst(Order newOrder) {
         var queue = getQueue(newOrder.getSide().opposite());
-        for (Order matchedOrder : queue) {
-            if (newOrder.matches(matchedOrder) && matchedOrder.canTrade()) {
-                return matchedOrder;
-            }
-        }
-        return null;
+        if (newOrder.matches(queue.getFirst()))
+            return queue.getFirst();
+        else
+            return null;
     }
 
     public void putBack(Order order) {
