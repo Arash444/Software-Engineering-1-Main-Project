@@ -9,28 +9,28 @@ public final class MatchResult {
     private final Order remainder;
     private final LinkedList<Trade> trades;
     private final int lastTradedPrice;
-    private boolean justBeenActivated;
+    private final boolean activatedOrder;
 
-    public static MatchResult executed(Order remainder, List<Trade> trades, int lastTradedPrice) {
-        return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), lastTradedPrice);
+
+    public static MatchResult executed(Order remainder, List<Trade> trades, int lastTradedPrice, boolean activatedOrder) {
+        return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), lastTradedPrice, activatedOrder);
     }
 
     public static MatchResult notEnoughCredit(int lastTradedPrice) {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_CREDIT, null, new LinkedList<>(), lastTradedPrice);
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_CREDIT, null, new LinkedList<>(), lastTradedPrice, false);
     }
     public static MatchResult notEnoughPositions(int lastTradedPrice) {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_POSITIONS, null, new LinkedList<>(), lastTradedPrice);
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_POSITIONS, null, new LinkedList<>(), lastTradedPrice, false);
     }
     public static MatchResult notEnoughTradedQuantity(int lastTradedPrice) {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>(), lastTradedPrice);
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>(), lastTradedPrice, false);
     }
-    private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades, int lastTradedPrice) {
+    private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades, int lastTradedPrice, boolean activatedOrder) {
         this.outcome = outcome;
         this.remainder = remainder;
         this.trades = trades;
         this.lastTradedPrice = lastTradedPrice;
-        this.justBeenActivated = false;
-
+        this.activatedOrder = activatedOrder;
     }
 
     public MatchingOutcome outcome() {
@@ -47,9 +47,7 @@ public final class MatchResult {
         return trades;
     }
 
-    public void activate() {justBeenActivated = true;}
-
-    public boolean hasJustBeenActivated() {return justBeenActivated;}
+    public boolean hasOrderBeenActivated() {return activatedOrder;}
 
     @Override
     public boolean equals(Object obj) {

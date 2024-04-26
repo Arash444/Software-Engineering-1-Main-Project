@@ -59,7 +59,7 @@ public class StopLimitOrder extends Order{
         quantity = updateOrderRq.getQuantity();
         price = updateOrderRq.getPrice();
         stopPrice = updateOrderRq.getStopPrice();
-}
+    }
 
     public boolean checkStopPriceReached(int last_traded_price){
         if (this.getSide() == Side.BUY && last_traded_price >= stopPrice)
@@ -67,6 +67,16 @@ public class StopLimitOrder extends Order{
         else if (this.getSide() == Side.SELL && last_traded_price <= stopPrice)
             return true;
         return false;
+    }
+    @Override
+    public boolean queuesBefore(Order order) {
+        StopLimitOrder stopLimitOrder = (StopLimitOrder) order;
+
+        if (stopLimitOrder.getSide() == Side.BUY) {
+            return stopPrice < stopLimitOrder.getStopPrice();
+        } else {
+            return stopPrice > stopLimitOrder.getStopPrice();
+        }
     }
     @Override
     public boolean canTrade(){ return hasBeenTriggered; }

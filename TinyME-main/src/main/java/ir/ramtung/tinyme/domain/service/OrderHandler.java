@@ -34,41 +34,12 @@ public class OrderHandler {
         this.eventPublisher = eventPublisher;
         this.matcher = matcher;
     }
-    private List<StopLimitOrder> findTriggeredOrders(Security security) {
-        List<StopLimitOrder> ordersToTrigger = new LinkedList<>();
 
-        List<StopLimitOrder> buyOrdersToTrigger = new LinkedList<>();
-        for (Order order : security.getOrderBook().getBuyQueue()) {
-            if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
-                    security.getLastTradedPrice() >= stopLimitOrder.getStopPrice()) {
-                buyOrdersToTrigger.add(stopLimitOrder);
-            }
-        }
-        buyOrdersToTrigger.sort(Comparator.comparing(StopLimitOrder::getStopPrice)
-                .thenComparing(StopLimitOrder::getEntryTime));
-
-        List<StopLimitOrder> sellOrdersToTrigger = new LinkedList<>();
-        for (Order order : security.getOrderBook().getSellQueue()) {
-            if (!order.canTrade() && order instanceof StopLimitOrder stopLimitOrder &&
-                    security.getLastTradedPrice() <= stopLimitOrder.getStopPrice()) {
-                sellOrdersToTrigger.add(stopLimitOrder);
-            }
-        }
-        sellOrdersToTrigger.sort(Comparator.comparing(StopLimitOrder::getStopPrice).reversed()
-                .thenComparing(StopLimitOrder::getEntryTime));
-
-        ordersToTrigger.addAll(buyOrdersToTrigger);
-        ordersToTrigger.addAll(sellOrdersToTrigger);
-        return ordersToTrigger;
-    }
     private void handleStopLimitOrderActivation(Security security, long requestID) {
-        List<StopLimitOrder> ordersToTrigger = findTriggeredOrders(security);
+        List<StopLimitOrder> ordersToTrigger = findActivatedOrders(security);
 
         while (!ordersToTrigger.isEmpty()) {
-            StopLimitOrder stopLimitOrder = ordersToTrigger.get(0);
-            StopLimitOrder originalOrder = (StopLimitOrder) stopLimitOrder.snapshot();
             MatchResult matchResult = security.triggerOrder(originalOrder, stopLimitOrder, matcher);
-
             if (matchResult.outcome() == MatchingOutcome.EXECUTED) {
                 eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
             } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
@@ -81,7 +52,7 @@ public class OrderHandler {
             if (!matchResult.trades().isEmpty()) {
                 eventPublisher.publish(new OrderExecutedEvent(requestID, stopLimitOrder.getOrderId(),
                         matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
-                List<StopLimitOrder> newOrdersToTrigger = findTriggeredOrders(security);
+                List<StopLimitOrder> newOrdersToTrigger = findActivatedOrders(security);
                 ordersToTrigger.addAll(newOrdersToTrigger);
             }
             ordersToTrigger.remove(0);
@@ -118,12 +89,12 @@ public class OrderHandler {
                 eventPublisher.publish(new OrderAcceptedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
             else
                 eventPublisher.publish(new OrderUpdatedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
-            if (matchResult.hasJustBeenActivated())
+            if (matchResult.hasOrderBeenActivated())
                 eventPublisher.publish(new OrderActivatedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
             if (!matchResult.trades().isEmpty()) {
                 eventPublisher.publish(new OrderExecutedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
+                handleStopLimitOrderActivation(security, enterOrderRq.getRequestId());
             }
-            handleStopLimitOrderActivation(security, enterOrderRq.getRequestId());
 
         } catch (InvalidRequestException ex) {
             eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), ex.getReasons()));

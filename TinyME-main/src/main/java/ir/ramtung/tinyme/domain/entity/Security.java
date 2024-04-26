@@ -8,6 +8,8 @@ import ir.ramtung.tinyme.messaging.Message;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 
 @Getter
@@ -20,6 +22,8 @@ public class Security {
     private int lotSize = 1;
     @Builder.Default
     private OrderBook orderBook = new OrderBook();
+    @Builder.Default
+    private OrderBook stopLimitOrderBook = new OrderBook();
     @Builder.Default
     private int lastTradedPrice = 15000;
 
@@ -34,18 +38,9 @@ public class Security {
                     enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder,
                     enterOrderRq.getEntryTime(), enterOrderRq.getPeakSize(), enterOrderRq.getMinimumExecutionQuantity());
         else if (enterOrderRq.getStopPrice() != 0) {
-            StopLimitOrder stopLimitOrder = new StopLimitOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
+            order = new StopLimitOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
                     enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
                     enterOrderRq.getStopPrice());
-            order = stopLimitOrder;
-            if(stopLimitOrder.checkStopPriceReached(lastTradedPrice))
-            {
-                stopLimitOrder.activate();
-                MatchResult matchResult = matcher.execute(order, false);
-                matchResult.activate();
-                lastTradedPrice = matchResult.getLastTradedPrice();;
-                return matchResult;
-            }
         }
         else
             order = new Order(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
@@ -113,11 +108,8 @@ public class Security {
         Order originalOrder = order.snapshot();
         order.updateFromRequest(updateOrderRq);
 
-        if (!order.canTrade() && (order instanceof StopLimitOrder stopLimitOrder) && stopLimitOrder.checkStopPriceReached(lastTradedPrice)) {
-            MatchResult matchResult = triggerOrder((StopLimitOrder) originalOrder, stopLimitOrder, matcher);
-            matchResult.activate();
-            return matchResult;
-        }
+        if (!order.canTrade() && (order instanceof StopLimitOrder stopLimitOrder) && stopLimitOrder.checkStopPriceReached(lastTradedPrice))
+            return triggerOrder((StopLimitOrder) originalOrder, stopLimitOrder, matcher);
 
         if (updateOrderRq.getSide() == Side.BUY) {
             order.getBroker().increaseCreditBy(originalOrder.getValue());
@@ -126,7 +118,7 @@ public class Security {
             if (updateOrderRq.getSide() == Side.BUY) {
                 order.getBroker().decreaseCreditBy(order.getValue());
             }
-            return MatchResult.executed(null, List.of(), lastTradedPrice);
+            return MatchResult.executed(null, List.of(), lastTradedPrice, false);
         }
         else
             order.markAsNew();
@@ -141,5 +133,13 @@ public class Security {
         }
         lastTradedPrice = matchResult.getLastTradedPrice();
         return matchResult;
+    }
+    private List<StopLimitOrder> findActivatedOrders(Side side) {
+        List<StopLimitOrder> ordersToTrigger = new LinkedList<>();
+        if(side == Side.BUY)
+            stopLimitOrderBook.matchWithFirst()
+        ordersToTrigger.addAll(buyOrdersToTrigger);
+        ordersToTrigger.addAll(sellOrdersToTrigger);
+        return ordersToTrigger;
     }
 }
