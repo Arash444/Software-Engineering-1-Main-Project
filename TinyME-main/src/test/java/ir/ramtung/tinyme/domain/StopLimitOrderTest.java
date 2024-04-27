@@ -225,7 +225,7 @@ public class StopLimitOrderTest {
     }
 
     @Test
-    void new_order_triggers_stop_limit_order_which_triggers_another_stop_limit_order_check_activation() {
+    void new_order_triggers_stop_limit_order_which_triggers_another_stop_limit_order_check_events() {
         StopLimitOrder firstStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
                 buy_broker, shareholder, 15500);
 
@@ -343,6 +343,20 @@ public class StopLimitOrderTest {
         assertThat(sell_broker.getCredit()).isEqualTo(new_sell_credit);
         int new_buy_credit = 100000000 - 500 * 15800 - 500 * 15850;
         assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
+    }
+    @Test
+    void new_sell_stop_limit_order_activated_from_the_start_and_trades_check_activation() {
+        Order matchingBuyOrder = new Order(1, security, BUY, 500, 15850, buy_broker,
+                shareholder, 0);
+        security.getOrderBook().enqueue(matchingBuyOrder);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, security.getIsin(),
+                2, LocalDateTime.now(), Side.SELL, 1000, 15800,
+                sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
+                0, 15000));
+
+        assertThat(security.getStopLimitOrderBook().getBuyQueue()).isEmpty();
+        assertThat(security.getStopLimitOrderBook().getSellQueue()).isEmpty();
     }
     @Test
     void new_sell_stop_limit_order_activated_from_the_start_no_trade_check_events() {
@@ -496,6 +510,26 @@ public class StopLimitOrderTest {
     }
     @Test
     void
+    update_buy_stop_limit_order_change_stop_price_activates_no_trade_check_activation()
+    {
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
+                buy_broker, shareholder, 50000);
+        Order sellOrder = new Order(2, security, Side.SELL, 500, 15550,
+                sell_broker, shareholder, 0);
+        security.getStopLimitOrderBook().enqueue(stopLimitOrder);
+        security.getOrderBook().enqueue(sellOrder);
+
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, security.getIsin(), 1,
+                LocalDateTime.now(), Side.BUY, 300, 15500, buy_broker.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 10000));
+
+        assertThat(security.getStopLimitOrderBook().getBuyQueue()).isEmpty();
+        assertThat(security.getStopLimitOrderBook().getSellQueue()).isEmpty();
+        assertThat(stopLimitOrder.canTrade()).isTrue();
+        assertThat(sellOrder.canTrade()).isTrue();
+    }
+    @Test
+    void
     update_buy_stop_limit_order_change_stop_price_does_not_activate()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
@@ -559,6 +593,20 @@ public class StopLimitOrderTest {
         inOrder.verify(eventPublisher).publish(new OrderDeletedEvent(1, 1));
         inOrder.verifyNoMoreInteractions();
         assertThat(sell_broker.getCredit()).isEqualTo(100000000);
+    }
+    @Test
+    void invalid_stop_limit_delete_with_order_id_not_found() {
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
+                buy_broker, shareholder, 50000);
+        security.getStopLimitOrderBook().enqueue(stopLimitOrder);
+
+        orderHandler.handleDeleteOrder(new DeleteOrderRq(1, security.getIsin(), Side.BUY, 2));
+
+        InOrder inOrder = inOrder(eventPublisher);
+        inOrder.verify(eventPublisher).publish(new OrderRejectedEvent(1, 2,
+                List.of(Message.ORDER_ID_NOT_FOUND)));
+        inOrder.verifyNoMoreInteractions();
+        assertThat(buy_broker.getCredit()).isEqualTo(100000000);
     }
     @Test
     void new_order_triggers_two_sell_orders_each_trigger_two_check_order_of_events() {
@@ -786,6 +834,9 @@ public class StopLimitOrderTest {
                 buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
+        assertThat(security.getStopLimitOrderBook().getBuyQueue()).isEmpty();
+        assertThat(security.getStopLimitOrderBook().getSellQueue()).isEmpty();
+
         assertThat(order1.canTrade()).isTrue();
         assertThat(order2.canTrade()).isTrue();
         assertThat(order3.canTrade()).isTrue();
@@ -823,6 +874,9 @@ public class StopLimitOrderTest {
                 10, LocalDateTime.now(), Side.BUY, 10, 15850,
                 buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
+
+        assertThat(security.getStopLimitOrderBook().getBuyQueue()).isEmpty();
+        assertThat(security.getStopLimitOrderBook().getSellQueue()).isEmpty();
 
         assertThat(order1.canTrade()).isTrue();
         assertThat(order2.canTrade()).isTrue();
