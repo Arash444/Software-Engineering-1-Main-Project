@@ -70,13 +70,16 @@ public class StopLimitOrder extends Order{
     }
     @Override
     public boolean queuesBefore(Order order) {
-        StopLimitOrder stopLimitOrder = (StopLimitOrder) order;
-
-        if (stopLimitOrder.getSide() == Side.BUY) {
-            return stopPrice < stopLimitOrder.getStopPrice();
-        } else {
-            return stopPrice > stopLimitOrder.getStopPrice();
+        if (!canTrade()) {
+            StopLimitOrder stopLimitOrder = (StopLimitOrder) order;
+            if (stopLimitOrder.getSide() == Side.BUY) {
+                return stopPrice < stopLimitOrder.getStopPrice();
+            } else {
+                return stopPrice > stopLimitOrder.getStopPrice();
+            }
         }
+        else
+            return super.queuesBefore(order);
     }
     @Override
     public boolean canTrade(){ return hasBeenActivated; }

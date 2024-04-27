@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
 @Import(MockedJMSTestConfig.class)
+@DirtiesContext
 class SecurityTest {
     private Security security;
     private Broker broker;
