@@ -144,7 +144,7 @@ public class Security {
     {
         if (order.getSide() == Side.BUY)
             order.getBroker().increaseCreditBy(order.getValue());
-        stopLimitOrderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
+        orderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
     }
     private void deleteStopLimitOrder(StopLimitOrder stopLimitOrder, DeleteOrderRq deleteOrderRq)
     {
