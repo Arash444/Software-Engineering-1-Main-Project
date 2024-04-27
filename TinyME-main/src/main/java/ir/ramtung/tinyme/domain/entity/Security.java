@@ -51,22 +51,18 @@ public class Security {
         lastTradedPrice = matchResult.getLastTradedPrice();;
         return matchResult;
     }
-
     public void deleteOrder(DeleteOrderRq deleteOrderRq) throws InvalidRequestException {
-        boolean isInStopLimitOrderBook = false;
         Order order = orderBook.findByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
-        if (order == null){
-            order = stopLimitOrderBook.findByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
-            isInStopLimitOrderBook = true;
+        if (order != null)
+            deleteNormalOrder(order, deleteOrderRq);
+        else {
+            StopLimitOrder stopLimitOrder = (StopLimitOrder) stopLimitOrderBook.findByOrderId(deleteOrderRq.getSide(),
+                    deleteOrderRq.getOrderId());
+            if (stopLimitOrder != null)
+                deleteStopLimitOrder(stopLimitOrder, deleteOrderRq);
+            else
+                throw new InvalidRequestException(Message.ORDER_ID_NOT_FOUND);
         }
-        if (order == null)
-            throw new InvalidRequestException(Message.ORDER_ID_NOT_FOUND);
-        if (order.getSide() == Side.BUY)
-            order.getBroker().increaseCreditBy(order.getValue());
-        if (isInStopLimitOrderBook)
-            stopLimitOrderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
-        else
-            orderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
     }
     public MatchResult triggerOrder(StopLimitOrder originalOrder, StopLimitOrder order, Matcher matcher){
         if (order.getSide() == Side.BUY) {
@@ -149,5 +145,17 @@ public class Security {
         ordersToTrigger.addAll(buyOrdersToTrigger);
         ordersToTrigger.addAll(sellOrdersToTrigger);
         return ordersToTrigger;
+    }
+    private void deleteNormalOrder(Order order, DeleteOrderRq deleteOrderRq)
+    {
+        if (order.getSide() == Side.BUY)
+            order.getBroker().increaseCreditBy(order.getValue());
+        stopLimitOrderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
+    }
+    private void deleteStopLimitOrder(StopLimitOrder stopLimitOrder, DeleteOrderRq deleteOrderRq)
+    {
+        if (stopLimitOrder.getSide() == Side.BUY)
+            stopLimitOrder.getBroker().increaseCreditBy(stopLimitOrder.getValue());
+        stopLimitOrderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
     }
 }
