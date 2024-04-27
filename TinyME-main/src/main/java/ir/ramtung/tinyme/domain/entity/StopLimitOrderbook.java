@@ -13,11 +13,14 @@ public class StopLimitOrderbook extends OrderBook {
     public StopLimitOrder findFirstActivatedOrder(int newLastTradedPrice)
     {
         StopLimitOrder firstOrder;
-        if (isTradingPriceAscending(newLastTradedPrice))
+        if (!getBuyQueue().isEmpty() && isTradingPriceAscending(newLastTradedPrice) )
             firstOrder = (StopLimitOrder) getBuyQueue().getFirst();
-        else
+        else if (!getSellQueue().isEmpty() && !isTradingPriceAscending(newLastTradedPrice))
             firstOrder = (StopLimitOrder) getSellQueue().getFirst();
-        if (firstOrder.hasReachedStopPrice(newLastTradedPrice))
+        else
+            return null;
+
+        if (firstOrder!= null && firstOrder.hasReachedStopPrice(newLastTradedPrice))
             return firstOrder;
         else
             return null;
