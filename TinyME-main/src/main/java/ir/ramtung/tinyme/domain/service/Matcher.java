@@ -9,6 +9,7 @@ import java.util.ListIterator;
 
 @Service
 public class Matcher {
+    private boolean hasActivatedOrder = false;
     public MatchResult match(Order newOrder) {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
@@ -47,7 +48,7 @@ public class Matcher {
                 newOrder.makeQuantityZero();
             }
         }
-        return MatchResult.executed(newOrder, trades, last_traded_price, );
+        return MatchResult.executed(newOrder, trades, last_traded_price, hasActivatedOrder);
     }
 
     private void rollbackTradesBuy(Order newOrder, LinkedList<Trade> trades) {
@@ -73,13 +74,14 @@ public class Matcher {
 
     public MatchResult execute(Order order, Boolean isAmendOrder) {
         int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
-
         if (!order.canTrade()) {
             StopLimitOrder stopLimitOrder = (StopLimitOrder) order;
-            if(!stopLimitOrder.checkStopPriceReached(previous_last_traded_price))
+            if(!stopLimitOrder.hasReachedStopPrice(previous_last_traded_price))
                 return handleNonActivatedOrder(stopLimitOrder, previous_last_traded_price);
-            else
+            else {
                 stopLimitOrder.activate();
+                hasActivatedOrder = true;
+            }
         }
 
         MatchResult result = match(order);
@@ -123,7 +125,7 @@ public class Matcher {
             stopLimitOrder.getBroker().decreaseCreditBy(stopLimitOrder.getValue());
         }
         stopLimitOrder.getSecurity().getStopLimitOrderBook().enqueue(stopLimitOrder);
-        return MatchResult.executed(stopLimitOrder, List.of(), previous_last_traded_price, );
+        return MatchResult.executed(stopLimitOrder, List.of(), previous_last_traded_price, false);
     }
 
 }
