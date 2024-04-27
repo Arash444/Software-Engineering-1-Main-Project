@@ -8,8 +8,8 @@ import java.util.ListIterator;
 
 @Getter
 public class OrderBook {
-    private final LinkedList<Order> buyQueue;
-    private final LinkedList<Order> sellQueue;
+    protected final LinkedList<Order> buyQueue;
+    protected final LinkedList<Order> sellQueue;
 
     public OrderBook() {
         buyQueue = new LinkedList<>();

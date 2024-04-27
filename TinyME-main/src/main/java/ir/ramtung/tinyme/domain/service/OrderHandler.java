@@ -14,7 +14,6 @@ import ir.ramtung.tinyme.repository.SecurityRepository;
 import ir.ramtung.tinyme.repository.ShareholderRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,11 +35,12 @@ public class OrderHandler {
     }
 
     private void handleStopLimitOrderActivation(Security security, long requestID) {
-        List<StopLimitOrder> ordersToTrigger = findActivatedOrders(security);
+        List<StopLimitOrder> ordersToTrigger = security.findActivatedOrders();
 
         while (!ordersToTrigger.isEmpty()) {
-            MatchResult matchResult = security.triggerOrder(originalOrder, stopLimitOrder, matcher);
-            if (matchResult.outcome() == MatchingOutcome.EXECUTED) {
+            StopLimitOrder stopLimitOrder = ordersToTrigger.get(0);
+            MatchResult matchResult = security.activateOrder(stopLimitOrder, matcher);
+            if (matchResult.hasOrderBeenActivated()) {
                 eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
             } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
                 eventPublisher.publish(new OrderRejectedEvent(requestID, stopLimitOrder.getOrderId(),
@@ -52,7 +52,7 @@ public class OrderHandler {
             if (!matchResult.trades().isEmpty()) {
                 eventPublisher.publish(new OrderExecutedEvent(requestID, stopLimitOrder.getOrderId(),
                         matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
-                List<StopLimitOrder> newOrdersToTrigger = findActivatedOrders(security);
+                List<StopLimitOrder> newOrdersToTrigger = security.findActivatedOrders();
                 ordersToTrigger.addAll(newOrdersToTrigger);
             }
             ordersToTrigger.remove(0);
