@@ -12,26 +12,26 @@ import java.time.LocalDateTime;
 @ToString(callSuper = true)
 public class StopLimitOrder extends Order{
     private int stopPrice;
-    private boolean hasBeenTriggered;
+    private boolean hasBeenActivated;
 
     public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker,
                           Shareholder shareholder, LocalDateTime entryTime, OrderStatus status, int stopPrice) {
         super(orderId, security, side, quantity, price, broker, shareholder, entryTime, status, 0);
         this.stopPrice = stopPrice;
-        this.hasBeenTriggered = false;
+        this.hasBeenActivated = false;
     }
     public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker,
                           Shareholder shareholder, int stopPrice) {
         super(orderId, security, side, quantity, price, broker, shareholder, LocalDateTime.now(), OrderStatus.NEW, 0);
         this.stopPrice = stopPrice;
-        this.hasBeenTriggered = false;
+        this.hasBeenActivated = false;
     }
 
     public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker,
                           Shareholder shareholder, LocalDateTime entryTime, OrderStatus status, int stopPrice, boolean isTriggered) {
         super(orderId, security, side, quantity, price, broker, shareholder, entryTime, status, 0);
         this.stopPrice = stopPrice;
-        this.hasBeenTriggered = isTriggered;
+        this.hasBeenActivated = isTriggered;
     }
 
     public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price,
@@ -39,19 +39,19 @@ public class StopLimitOrder extends Order{
         super(orderId, security, side, quantity, price, broker, shareholder,
                 entryTime, OrderStatus.NEW, 0);
         this.stopPrice = stopPrice;
-        this.hasBeenTriggered = false;
+        this.hasBeenActivated = false;
     }
 
     @Override
     public Order snapshot() {
         return new StopLimitOrder(orderId, security, side, quantity, price, broker, shareholder, entryTime,
-                OrderStatus.SNAPSHOT, stopPrice, hasBeenTriggered);
+                OrderStatus.SNAPSHOT, stopPrice, hasBeenActivated);
     }
 
     @Override
     public Order snapshotWithQuantity(int newQuantity) {
         return new StopLimitOrder(orderId, security, side, newQuantity, price, broker, shareholder, entryTime,
-                OrderStatus.SNAPSHOT, stopPrice, hasBeenTriggered);
+                OrderStatus.SNAPSHOT, stopPrice, hasBeenActivated);
     }
 
     @Override
@@ -61,7 +61,7 @@ public class StopLimitOrder extends Order{
         stopPrice = updateOrderRq.getStopPrice();
     }
 
-    public boolean checkStopPriceReached(int last_traded_price){
+    public boolean hasReachedStopPrice(int last_traded_price){
         if (this.getSide() == Side.BUY && last_traded_price >= stopPrice)
             return true;
         else if (this.getSide() == Side.SELL && last_traded_price <= stopPrice)
@@ -79,7 +79,7 @@ public class StopLimitOrder extends Order{
         }
     }
     @Override
-    public boolean canTrade(){ return hasBeenTriggered; }
-    public void activate() { hasBeenTriggered = true; }
+    public boolean canTrade(){ return hasBeenActivated; }
+    public void activate() { hasBeenActivated = true; }
 
     }
