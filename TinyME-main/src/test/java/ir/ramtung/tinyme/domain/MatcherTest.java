@@ -27,6 +27,7 @@ public class MatcherTest {
     private Broker broker;
     private Shareholder shareholder;
     private OrderBook orderBook;
+    private StopLimitOrderbook stopLimitOrderBook;
     private List<Order> orders;
     @Autowired
     private Matcher matcher;
@@ -38,6 +39,7 @@ public class MatcherTest {
         shareholder = Shareholder.builder().build();
         shareholder.incPosition(security, 100_000);
         orderBook = security.getOrderBook();
+        stopLimitOrderBook = security.getStopLimitOrderBook();
         orders = Arrays.asList(
                 new Order(1, security, BUY, 304, 15700, broker, shareholder, 0),
                 new Order(2, security, BUY, 43, 15500, broker, shareholder, 0),
@@ -223,8 +225,8 @@ public class MatcherTest {
                 broker, shareholder, 100);
         StopLimitOrder stopLimitOrder2 = new StopLimitOrder(12, security, Side.BUY, 2000, 15750,
                 broker, shareholder, 100);
-        orderBook.enqueue(stopLimitOrder1);
-        orderBook.enqueue(stopLimitOrder2);
+        stopLimitOrderBook.enqueue(stopLimitOrder1);
+        stopLimitOrderBook.enqueue(stopLimitOrder2);
 
         Order order = new Order(12, security, Side.SELL, 500, 15500, broker, shareholder, 0);
         Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order);
@@ -232,7 +234,7 @@ public class MatcherTest {
         MatchResult result = matcher.match(order);
         assertThat(result.remainder().getQuantity()).isEqualTo(153);
         assertThat(result.trades()).containsExactly(trade1, trade2);
-        assertThat(security.getOrderBook().getBuyQueue().getFirst().getOrderId()).isEqualTo(11);
+        assertThat(security.getStopLimitOrderBook().getBuyQueue().getFirst().getOrderId()).isEqualTo(11);
     }
     @Test
     void new_sell_order_buy_activated_stop_limit_order_should_trade() {
@@ -278,7 +280,7 @@ public class MatcherTest {
     @Test
     void new_buy_order_matches_partially_with_the_entire_sell_queue_except_stop_limit_order() {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(12, security, SELL, 2000, 15810, broker, shareholder, 100);
-        orderBook.enqueue(stopLimitOrder);
+        stopLimitOrderBook.enqueue(stopLimitOrder);
 
         Order order = new Order(11, security, BUY, 2000, 15820, broker, shareholder, 0);
         List<Trade> trades = new ArrayList<>();
@@ -292,6 +294,6 @@ public class MatcherTest {
         MatchResult result = matcher.match(order);
         assertThat(result.remainder().getQuantity()).isEqualTo(160);
         assertThat(result.trades()).isEqualTo(trades);
-        assertThat(security.getOrderBook().getSellQueue().getFirst().getOrderId()).isEqualTo(12);
+        assertThat(security.getStopLimitOrderBook().getSellQueue().getFirst().getOrderId()).isEqualTo(12);
     }
 }
