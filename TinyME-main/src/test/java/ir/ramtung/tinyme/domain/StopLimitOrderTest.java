@@ -638,16 +638,16 @@ public class StopLimitOrderTest {
                 order5, order3);
 
         InOrder inOrder = inOrder(eventPublisher);
-        verify(eventPublisher).publish(new OrderAcceptedEvent(1, 10));
-        verify(eventPublisher).publish(new OrderExecutedEvent(1, 10, List.of(new TradeDTO(trade1))));
-        verify(eventPublisher).publish(new OrderActivatedEvent(1, 7));
-        verify(eventPublisher).publish(new OrderExecutedEvent(1, 7, List.of(new TradeDTO(trade2))));
-        verify(eventPublisher).publish(new OrderActivatedEvent(1, 5));
-        verify(eventPublisher).publish(new OrderExecutedEvent(1, 5, List.of(new TradeDTO(trade3))));
-        verify(eventPublisher).publish(new OrderActivatedEvent(1, 9));
-        verify(eventPublisher).publish(new OrderActivatedEvent(1, 4));
-        verify(eventPublisher).publish(new OrderActivatedEvent(1, 6));
-        verify(eventPublisher).publish(new OrderActivatedEvent(1, 8));
+        inOrder.verify(eventPublisher).publish(new OrderAcceptedEvent(1, 10));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 10, List.of(new TradeDTO(trade1))));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 7));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 7, List.of(new TradeDTO(trade2))));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 5));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 5, List.of(new TradeDTO(trade3))));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 9));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 4));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 6));
+        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 8));
         inOrder.verifyNoMoreInteractions();
     }
 
