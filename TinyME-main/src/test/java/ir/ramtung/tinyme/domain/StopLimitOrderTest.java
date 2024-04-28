@@ -407,23 +407,6 @@ public class StopLimitOrderTest {
         );
     }
     @Test
-    void invalid_update_changing_stop_price_stop_limit_order() {
-        StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 100, 15750,
-                buy_broker, shareholder, LocalDateTime.now(), OrderStatus.NEW, 100, true);
-        security.getStopLimitOrderBook().enqueue(stopLimitOrder);
-
-        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, security.getIsin(), 1,
-                LocalDateTime.now(), Side.BUY, 500, 15450, buy_broker.getBrokerId(),
-                shareholder.getShareholderId(), 0, 0, 500));
-
-        ArgumentCaptor<OrderRejectedEvent> orderRejectedCaptor = ArgumentCaptor.forClass(OrderRejectedEvent.class);
-        verify(eventPublisher).publish(orderRejectedCaptor.capture());
-        OrderRejectedEvent outputEvent = orderRejectedCaptor.getValue();
-        assertThat(outputEvent.getErrors()).containsOnly(
-                Message.CANNOT_CHANGE_STOP_PRICE
-        );
-    }
-    @Test
     void
     update_buy_stop_limit_order_change_stop_price_activates_with_trade_check_events()
     {

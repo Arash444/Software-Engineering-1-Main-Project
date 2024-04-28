@@ -74,10 +74,7 @@ public class Security {
         return matchResult;
     }
 
-    public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
-        Order order = orderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
-        if (order == null)
-            order = stopLimitOrderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
+    public void validateUpdateOrderRequest(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
         if (order == null)
             throw new InvalidRequestException(Message.ORDER_ID_NOT_FOUND);
         if (order.getMinimumExecutionQuantity() != updateOrderRq.getMinimumExecutionQuantity())
@@ -87,18 +84,21 @@ public class Security {
         if (!(order instanceof IcebergOrder) && updateOrderRq.getPeakSize() != 0)
             throw new InvalidRequestException(Message.CANNOT_SPECIFY_PEAK_SIZE_FOR_A_NON_ICEBERG_ORDER);
 
-        boolean have_changed_triggered_order_stop_price = order instanceof StopLimitOrder stopLimitOrder
-                && stopLimitOrder.canTrade() && (stopLimitOrder.getStopPrice() != updateOrderRq.getStopPrice());
         boolean have_added_stop_price_to_non_stop_limit_order = !(order instanceof StopLimitOrder)
                 && updateOrderRq.getStopPrice() != 0;
-        if (have_added_stop_price_to_non_stop_limit_order || have_changed_triggered_order_stop_price)
+        if (have_added_stop_price_to_non_stop_limit_order)
             throw new InvalidRequestException(Message.CANNOT_CHANGE_STOP_PRICE);
+    }
 
+    public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
+        Order order = orderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
+        if (order == null)
+            order = stopLimitOrderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
+        validateUpdateOrderRequest(order, updateOrderRq);
         if (updateOrderRq.getSide() == Side.SELL &&
                 !order.getShareholder().hasEnoughPositionsOn(this,
-                orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
+                        orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
             return MatchResult.notEnoughPositions(lastTradedPrice);
-
         boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
                 || updateOrderRq.getPrice() != order.getPrice()
                 || ((order instanceof IcebergOrder icebergOrder) && (icebergOrder.getPeakSize() < updateOrderRq.getPeakSize())
