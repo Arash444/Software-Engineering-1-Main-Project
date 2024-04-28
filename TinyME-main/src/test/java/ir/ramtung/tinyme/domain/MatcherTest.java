@@ -211,9 +211,10 @@ public class MatcherTest {
     @Test
     void new_stop_limit_order_has_been_activated() {
         StopLimitOrder order = new StopLimitOrder(11, security, Side.SELL, 500, 15500,
-                broker, shareholder, LocalDateTime.now(), OrderStatus.NEW, 100, true);
-        Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order);
-        Trade trade2 = new Trade(security, 15500, 43, orders.get(1), order.snapshotWithQuantity(196));
+                broker, shareholder,55100);
+        Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order.convertToOrder());
+        Trade trade2 = new Trade(security, 15500, 43, orders.get(1),
+                order.convertToOrder().snapshotWithQuantity(196));
         MatchResult result = matcher.execute(order, false);
         assertThat(result.remainder().getQuantity()).isEqualTo(153);
         assertThat(result.trades()).containsExactly(trade1, trade2);
@@ -222,9 +223,9 @@ public class MatcherTest {
     @Test
     void new_sell_order_buy_stop_limit_order_should_not_trade_but_others_should() {
         StopLimitOrder stopLimitOrder1 = new StopLimitOrder(11, security, Side.BUY, 2000, 15750,
-                broker, shareholder, 100);
+                broker, shareholder, 51000);
         StopLimitOrder stopLimitOrder2 = new StopLimitOrder(12, security, Side.BUY, 2000, 15750,
-                broker, shareholder, 100);
+                broker, shareholder, 51000);
         stopLimitOrderBook.enqueue(stopLimitOrder1);
         stopLimitOrderBook.enqueue(stopLimitOrder2);
 
@@ -239,11 +240,10 @@ public class MatcherTest {
     @Test
     void new_sell_order_buy_activated_stop_limit_order_should_trade() {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(11, security, Side.BUY, 100, 15750,
-                broker, shareholder, LocalDateTime.now(), OrderStatus.NEW, 100, true);
-        orderBook.enqueue(stopLimitOrder);
-
+                broker, shareholder, 100);
         Order order = new Order(12, security, Side.SELL, 500, 15500, broker, shareholder, 0);
-        Trade trade1 = new Trade(security, 15750, 100, stopLimitOrder, order);
+        Trade trade1 = new Trade(security, 15750, 100, stopLimitOrder.convertToOrder(), order);
+        matcher.execute(stopLimitOrder, false);
         Trade trade2 = new Trade(security, 15700, 304, orders.get(0), order.snapshotWithQuantity(400));
         Trade trade3 = new Trade(security, 15500, 43, orders.get(1), order.snapshotWithQuantity(96));
         MatchResult result = matcher.execute(order, false);
