@@ -637,7 +637,7 @@ public class StopLimitOrderTest {
         Trade trade3 = new Trade(security, 15700, 50,
                 order5, order3);
 
-        //InOrder inOrder = inOrder(eventPublisher);
+        InOrder inOrder = inOrder(eventPublisher);
         verify(eventPublisher).publish(new OrderAcceptedEvent(1, 10));
         verify(eventPublisher).publish(new OrderExecutedEvent(1, 10, List.of(new TradeDTO(trade1))));
         verify(eventPublisher).publish(new OrderActivatedEvent(1, 7));
@@ -648,7 +648,7 @@ public class StopLimitOrderTest {
         verify(eventPublisher).publish(new OrderActivatedEvent(1, 4));
         verify(eventPublisher).publish(new OrderActivatedEvent(1, 6));
         verify(eventPublisher).publish(new OrderActivatedEvent(1, 8));
-        //inOrder.verifyNoMoreInteractions();
+        inOrder.verifyNoMoreInteractions();
     }
 
     @Test
