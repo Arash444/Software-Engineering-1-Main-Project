@@ -44,9 +44,8 @@ public class StopLimitOrder extends Order{
 
     public Order convertToOrder()
     {
-        Order newOrder = new Order(orderId, security, side, quantity, price, broker, shareholder,
+        return new Order(orderId, security, side, quantity, price, broker, shareholder,
                 LocalDateTime.now(), OrderStatus.NEW, 0);
-        return newOrder;
     }
 
     @Override
@@ -90,6 +89,4 @@ public class StopLimitOrder extends Order{
     }
     @Override
     public boolean canTrade(){ return hasBeenActivated; }
-    public void activate() { hasBeenActivated = true; }
-
     }
