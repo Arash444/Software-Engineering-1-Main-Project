@@ -29,20 +29,23 @@ public class StopLimitOrderbook extends OrderBook {
         super.removeByOrderId(side, orderId);
         updateMinMaxStopPrice(side);
     }
-    public StopLimitOrder findFirstActivatedOrder(int lastTradedPrice)
-    {
-        StopLimitOrder firstOrder;
-        if (!getSellQueue().isEmpty() && maxSellStopPriceIsHigherThan(lastTradedPrice) )
-            firstOrder = (StopLimitOrder) getSellQueue().getFirst();
-        else if (!getBuyQueue().isEmpty() && minBuyStopPriceIsLowerThan(lastTradedPrice))
-            firstOrder = (StopLimitOrder) getBuyQueue().getFirst();
-        else
-            return null;
-        if (firstOrder.hasReachedStopPrice(lastTradedPrice))
-            return firstOrder;
-        else
-            return null;
+    public StopLimitOrder findFirstActivatedOrder(int lastTradedPrice) {
+        if (!getSellQueue().isEmpty() && maxSellStopPriceIsHigherThan(lastTradedPrice)) {
+            StopLimitOrder sellOrder = (StopLimitOrder) getSellQueue().getFirst();
+            if (sellOrder.hasReachedStopPrice(lastTradedPrice)) {
+                return sellOrder;
+            }
+        }
+
+        if (!getBuyQueue().isEmpty() && minBuyStopPriceIsLowerThan(lastTradedPrice)) {
+            StopLimitOrder buyOrder = (StopLimitOrder) getBuyQueue().getFirst();
+            if (buyOrder.hasReachedStopPrice(lastTradedPrice)) {
+                return buyOrder;
+            }
+        }
+        return null;
     }
+
     private void updateMinMaxStopPrice(Side side)  {
         if(side == Side.BUY)
             updateMinBuyStopPrice();
