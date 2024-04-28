@@ -79,7 +79,7 @@ public class Matcher {
             if(!stopLimitOrder.hasReachedStopPrice(previous_last_traded_price))
                 return handleNonActivatedOrder(stopLimitOrder, previous_last_traded_price);
             else {
-                stopLimitOrder.activate();
+                order = stopLimitOrder.convertToOrder();
                 hasActivatedOrder = true;
             }
         }

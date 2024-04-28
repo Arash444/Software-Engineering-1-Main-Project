@@ -42,6 +42,13 @@ public class StopLimitOrder extends Order{
         this.hasBeenActivated = false;
     }
 
+    public Order convertToOrder()
+    {
+        Order newOrder = new Order(orderId, security, side, quantity, price, broker, shareholder,
+                LocalDateTime.now(), OrderStatus.NEW, 0);
+        return newOrder;
+    }
+
     @Override
     public Order snapshot() {
         return new StopLimitOrder(orderId, security, side, quantity, price, broker, shareholder, entryTime,
