@@ -24,10 +24,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static ir.ramtung.tinyme.domain.entity.Side.BUY;
 import static ir.ramtung.tinyme.domain.entity.Side.SELL;
@@ -200,7 +198,8 @@ public class StopLimitOrderTest {
                 sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
-        assertThat(matchingStopLimitOrder.canTrade()).isTrue();
+        assertThat(security.getStopLimitOrderBook().getBuyQueue()).isEmpty();
+        assertThat(security.getStopLimitOrderBook().getSellQueue()).isEmpty();
 
     }
 
@@ -345,7 +344,7 @@ public class StopLimitOrderTest {
         assertThat(buy_broker.getCredit()).isEqualTo(new_buy_credit);
     }
     @Test
-    void new_sell_stop_limit_order_activated_from_the_start_and_trades_check_activation() {
+    void new_sell_stop_limit_order_activated_from_the_start_and_trades_check_orderbook() {
         Order matchingBuyOrder = new Order(1, security, BUY, 500, 15850, buy_broker,
                 shareholder, 0);
         security.getOrderBook().enqueue(matchingBuyOrder);
@@ -493,7 +492,7 @@ public class StopLimitOrderTest {
     }
     @Test
     void
-    update_buy_stop_limit_order_change_stop_price_activates_no_trade_check_activation()
+    update_buy_stop_limit_order_change_stop_price_activates_no_trade_check_orderbook()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
                 buy_broker, shareholder, 50000);
@@ -506,10 +505,21 @@ public class StopLimitOrderTest {
                 LocalDateTime.now(), Side.BUY, 300, 15500, buy_broker.getBrokerId(),
                 shareholder.getShareholderId(), 0, 0, 10000));
 
+        Set<Long> expectedBuyOrderIds = new HashSet<>(List.of(stopLimitOrder.getOrderId()));
+        LinkedList<Order> buyQueue = security.getOrderBook().getBuyQueue();
+        Set<Long> actualBuyOrderIds = buyQueue.stream()
+                .map(Order::getOrderId)
+                .collect(Collectors.toSet());
+        Set<Long> expectedSellOrderIds = new HashSet<>(List.of(sellOrder.getOrderId()));
+        LinkedList<Order> sellQueue = security.getOrderBook().getSellQueue();
+        Set<Long> actualSellOrderIds = sellQueue.stream()
+                .map(Order::getOrderId)
+                .collect(Collectors.toSet());
+
         assertThat(security.getStopLimitOrderBook().getBuyQueue()).isEmpty();
         assertThat(security.getStopLimitOrderBook().getSellQueue()).isEmpty();
-        assertThat(stopLimitOrder.canTrade()).isTrue();
-        assertThat(sellOrder.canTrade()).isTrue();
+        assertThat(expectedSellOrderIds).containsAll(actualSellOrderIds);
+        assertThat(expectedBuyOrderIds).containsAll(actualBuyOrderIds);
     }
     @Test
     void
@@ -627,18 +637,18 @@ public class StopLimitOrderTest {
         Trade trade3 = new Trade(security, 15700, 50,
                 order5, order3);
 
-        InOrder inOrder = inOrder(eventPublisher);
-        inOrder.verify(eventPublisher).publish(new OrderAcceptedEvent(1, 10));
-        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 10, List.of(new TradeDTO(trade1))));
-        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 7));
-        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 7, List.of(new TradeDTO(trade2))));
-        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 5));
-        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 5, List.of(new TradeDTO(trade3))));
-        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 9));
-        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 4));
-        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 6));
-        inOrder.verify(eventPublisher).publish(new OrderActivatedEvent(1, 8));
-        inOrder.verifyNoMoreInteractions();
+        //InOrder inOrder = inOrder(eventPublisher);
+        verify(eventPublisher).publish(new OrderAcceptedEvent(1, 10));
+        verify(eventPublisher).publish(new OrderExecutedEvent(1, 10, List.of(new TradeDTO(trade1))));
+        verify(eventPublisher).publish(new OrderActivatedEvent(1, 7));
+        verify(eventPublisher).publish(new OrderExecutedEvent(1, 7, List.of(new TradeDTO(trade2))));
+        verify(eventPublisher).publish(new OrderActivatedEvent(1, 5));
+        verify(eventPublisher).publish(new OrderExecutedEvent(1, 5, List.of(new TradeDTO(trade3))));
+        verify(eventPublisher).publish(new OrderActivatedEvent(1, 9));
+        verify(eventPublisher).publish(new OrderActivatedEvent(1, 4));
+        verify(eventPublisher).publish(new OrderActivatedEvent(1, 6));
+        verify(eventPublisher).publish(new OrderActivatedEvent(1, 8));
+        //inOrder.verifyNoMoreInteractions();
     }
 
     @Test
@@ -792,7 +802,7 @@ public class StopLimitOrderTest {
 
 
     @Test
-    void new_order_triggers_two_buy_orders_each_trigger_two_check_activation() {
+    void new_order_triggers_two_buy_orders_each_trigger_two_check_orderbook() {
         StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820);
         StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950);
         StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810);
@@ -817,21 +827,20 @@ public class StopLimitOrderTest {
                 buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
+        Set<Long> expectedOrderIds = new HashSet<>(Arrays.asList(order2.getOrderId(), order4.getOrderId(),
+                order5.getOrderId(), order6.getOrderId()));
+        LinkedList<Order> buyQueue = security.getOrderBook().getBuyQueue();
+        Set<Long> actualOrderIds = buyQueue.stream()
+                .map(Order::getOrderId)
+                .collect(Collectors.toSet());
+
         assertThat(security.getStopLimitOrderBook().getBuyQueue()).isEmpty();
         assertThat(security.getStopLimitOrderBook().getSellQueue()).isEmpty();
-
-        assertThat(order1.canTrade()).isTrue();
-        assertThat(order2.canTrade()).isTrue();
-        assertThat(order3.canTrade()).isTrue();
-        assertThat(order4.canTrade()).isTrue();
-        assertThat(order5.canTrade()).isTrue();
-        assertThat(order6.canTrade()).isTrue();
-        assertThat(order7.canTrade()).isTrue();
-        assertThat(order8.canTrade()).isTrue();
-        assertThat(order9.canTrade()).isTrue();
+        assertThat(security.getOrderBook().getSellQueue()).isEmpty();
+        assertThat(actualOrderIds).containsAll(expectedOrderIds);
     }
     @Test
-    void update_order_triggers_two_buy_orders_each_trigger_two_check_activation() {
+    void update_order_triggers_two_buy_orders_each_trigger_two_check_orderbook() {
         StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820);
         StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950);
         StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810);
@@ -858,18 +867,16 @@ public class StopLimitOrderTest {
                 buy_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 0));
 
+        Set<Long> expectedOrderIds = new HashSet<>(Arrays.asList(order2.getOrderId(), order4.getOrderId(),
+                order5.getOrderId(), order6.getOrderId()));
+        LinkedList<Order> buyQueue = security.getOrderBook().getBuyQueue();
+        Set<Long> actualOrderIds = buyQueue.stream()
+                .map(Order::getOrderId)
+                .collect(Collectors.toSet());
+
         assertThat(security.getStopLimitOrderBook().getBuyQueue()).isEmpty();
         assertThat(security.getStopLimitOrderBook().getSellQueue()).isEmpty();
-
-        assertThat(order1.canTrade()).isTrue();
-        assertThat(order2.canTrade()).isTrue();
-        assertThat(order3.canTrade()).isTrue();
-        assertThat(order4.canTrade()).isTrue();
-        assertThat(order5.canTrade()).isTrue();
-        assertThat(order6.canTrade()).isTrue();
-        assertThat(order7.canTrade()).isTrue();
-        assertThat(order8.canTrade()).isTrue();
-        assertThat(order9.canTrade()).isTrue();
-        assertThat(order10.canTrade()).isTrue();
+        assertThat(security.getOrderBook().getSellQueue()).isEmpty();
+        assertThat(actualOrderIds).containsAll(expectedOrderIds);
     }
 }

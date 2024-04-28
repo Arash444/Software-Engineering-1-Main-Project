@@ -106,9 +106,7 @@ public class Security {
 
 
     public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
-        Order order = orderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
-        if (order == null)
-            order = stopLimitOrderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
+        Order order = getOrderByID(updateOrderRq);
         validateUpdateOrderRequest(order, updateOrderRq);
         if (updateOrderRq.getSide() == Side.SELL &&
                 !order.getShareholder().hasEnoughPositionsOn(this,
@@ -139,23 +137,44 @@ public class Security {
         }
         else
             order.markAsNew();
-        if(!order.canTrade())
-            stopLimitOrderBook.removeByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
-        else
-            orderBook.removeByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
+
+        removeOrderByID(updateOrderRq,order);
         MatchResult matchResult = matcher.execute(order, true);
+
+
         if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
-            if(!order.canTrade())
-                stopLimitOrderBook.enqueue(originalOrder);
-            else
-                orderBook.enqueue(originalOrder);
+            enqueueOrder(originalOrder);
             if (updateOrderRq.getSide() == Side.BUY) {
                 originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
             }
         }
+
         lastTradedPrice = matchResult.getLastTradedPrice();
         return matchResult;
     }
+
+    private void enqueueOrder(Order originalOrder){
+        if(!originalOrder.canTrade())
+            stopLimitOrderBook.enqueue(originalOrder);
+        else
+            orderBook.enqueue(originalOrder);
+    }
+
+    private void removeOrderByID(EnterOrderRq updateOrderRq, Order order){
+        if(!order.canTrade())
+            stopLimitOrderBook.removeByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
+        else
+            orderBook.removeByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
+
+    }
+
+    private Order getOrderByID(EnterOrderRq updateOrderRq) {
+        Order order = orderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
+        if (order == null)
+            order = stopLimitOrderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
+        return order;
+    }
+
     public List<StopLimitOrder> findActivatedOrders() {
         List<StopLimitOrder> ordersToActivate = new LinkedList<>();
         StopLimitOrder activatedOrder = stopLimitOrderBook.findFirstActivatedOrder(lastTradedPrice);
