@@ -75,20 +75,35 @@ public class Security {
     }
 
     public void validateUpdateOrderRequest(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
-        if (order == null)
+        if (order == null) {
             throw new InvalidRequestException(Message.ORDER_ID_NOT_FOUND);
-        if (order.getMinimumExecutionQuantity() != updateOrderRq.getMinimumExecutionQuantity())
-            throw new InvalidRequestException(Message.CANNOT_CHANGE_MIN_EXE_QUANTITY);
-        if ((order instanceof IcebergOrder) && updateOrderRq.getPeakSize() == 0)
-            throw new InvalidRequestException(Message.INVALID_PEAK_SIZE);
-        if (!(order instanceof IcebergOrder) && updateOrderRq.getPeakSize() != 0)
-            throw new InvalidRequestException(Message.CANNOT_SPECIFY_PEAK_SIZE_FOR_A_NON_ICEBERG_ORDER);
-
-        boolean have_added_stop_price_to_non_stop_limit_order = !(order instanceof StopLimitOrder)
-                && updateOrderRq.getStopPrice() != 0;
-        if (have_added_stop_price_to_non_stop_limit_order)
-            throw new InvalidRequestException(Message.CANNOT_CHANGE_STOP_PRICE);
+        }
+        validateExecutionQuantity(order, updateOrderRq);
+        validateOrderType(order, updateOrderRq);
+        validateStopPrice(order, updateOrderRq);
     }
+
+    private void validateExecutionQuantity(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
+        if (order.getMinimumExecutionQuantity() != updateOrderRq.getMinimumExecutionQuantity()) {
+            throw new InvalidRequestException(Message.CANNOT_CHANGE_MIN_EXE_QUANTITY);
+        }
+    }
+
+    private void validateOrderType(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
+        if (order instanceof IcebergOrder && updateOrderRq.getPeakSize() == 0) {
+            throw new InvalidRequestException(Message.INVALID_PEAK_SIZE);
+        }
+        if (!(order instanceof IcebergOrder) && updateOrderRq.getPeakSize() != 0) {
+            throw new InvalidRequestException(Message.CANNOT_SPECIFY_PEAK_SIZE_FOR_A_NON_ICEBERG_ORDER);
+        }
+    }
+
+    private void validateStopPrice(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
+        if (!(order instanceof StopLimitOrder) && updateOrderRq.getStopPrice() != 0) {
+            throw new InvalidRequestException(Message.CANNOT_CHANGE_STOP_PRICE);
+        }
+    }
+
 
     public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
         Order order = orderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
