@@ -25,15 +25,17 @@ public class OrderHandler {
     ShareholderRepository shareholderRepository;
     EventPublisher eventPublisher;
     ContinuousMatcher continuousMatcher;
+    AuctionMatcher auctionMatcher;
 
     public OrderHandler(SecurityRepository securityRepository, BrokerRepository brokerRepository,
                         ShareholderRepository shareholderRepository, EventPublisher eventPublisher,
-                        ContinuousMatcher continuousMatcher) {
+                        ContinuousMatcher continuousMatcher, AuctionMatcher auctionMatcher) {
         this.securityRepository = securityRepository;
         this.brokerRepository = brokerRepository;
         this.shareholderRepository = shareholderRepository;
         this.eventPublisher = eventPublisher;
         this.continuousMatcher = continuousMatcher;
+        this.auctionMatcher = auctionMatcher;
     }
 
     private void handleStopLimitOrderActivation(Security security, long requestID) {

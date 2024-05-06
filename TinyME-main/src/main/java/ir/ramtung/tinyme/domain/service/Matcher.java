@@ -9,7 +9,7 @@ import java.util.ListIterator;
 
 @Service
 public abstract class Matcher {
-    public abstract MatchResult match(Order newOrder) ;
+    public abstract MatchResult match(Order newOrder);
 
     public abstract MatchResult execute(Order order, Boolean isAmendOrder);
 
