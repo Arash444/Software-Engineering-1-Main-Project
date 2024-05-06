@@ -96,6 +96,10 @@ public class OrderHandler {
                 eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
                 return;
             }
+            if (matchResult.outcome() == MatchingOutcome.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS) {
+                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), List.of(Message.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS)));
+                return;
+            }
             if (enterOrderRq.getRequestType() == OrderEntryType.NEW_ORDER)
                 eventPublisher.publish(new OrderAcceptedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
             else

@@ -22,6 +22,7 @@ public class Message {
     public static final String CANNOT_CHANGE_STOP_PRICE = "Cannot change stop price";
     public static final String CANNOT_HAVE_BOTH_STOP_PRICE_AND_MIN_EXE_QUANTITY = "Cannot have both a stop price and a minimum execution Quantity";
     public static final String CANNOT_BE_ICEBERG_AND_STOP_LIMIT = "Cannot be both an iceberg and a stop limit order";
+    public static final String STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS = "Stop limit orders cannot enter auctions";
 
 
 }
