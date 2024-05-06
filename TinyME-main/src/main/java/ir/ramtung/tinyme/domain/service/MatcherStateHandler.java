@@ -6,16 +6,12 @@ import ir.ramtung.tinyme.messaging.event.SecurityStateChangedEvent;
 import ir.ramtung.tinyme.messaging.event.TradeEvent;
 import ir.ramtung.tinyme.messaging.request.ChangingMatchingStateRq;
 import ir.ramtung.tinyme.messaging.request.MatchingState;
-import ir.ramtung.tinyme.repository.BrokerRepository;
 import ir.ramtung.tinyme.repository.SecurityRepository;
-import ir.ramtung.tinyme.repository.ShareholderRepository;
 
 import java.time.LocalDateTime;
 
 public class MatcherStateHandler {
     SecurityRepository securityRepository;
-    BrokerRepository brokerRepository;
-    ShareholderRepository shareholderRepository;
     EventPublisher eventPublisher;
     Matcher matcher;
 
@@ -42,6 +38,7 @@ public class MatcherStateHandler {
                 eventPublisher.publish(new TradeEvent(trade));
             }
         }
+        //ToDo: See if the opening price has to be published when we change from one state to another
 
     }
     private boolean shouldOpenAuction(MatchingState currentState, MatchingState newState){

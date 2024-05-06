@@ -2,9 +2,6 @@ package ir.ramtung.tinyme.domain.entity;
 
 import lombok.Getter;
 
-import java.util.List;
-import java.util.ListIterator;
-
 @Getter
 public class StopLimitOrderbook extends OrderBook {
     private int maxSellStopPrice;
