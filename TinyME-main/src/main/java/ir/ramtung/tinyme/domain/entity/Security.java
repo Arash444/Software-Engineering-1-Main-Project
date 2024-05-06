@@ -5,8 +5,10 @@ import ir.ramtung.tinyme.messaging.request.DeleteOrderRq;
 import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
 import ir.ramtung.tinyme.domain.service.Matcher;
 import ir.ramtung.tinyme.messaging.Message;
+import ir.ramtung.tinyme.messaging.request.MatchingState;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -23,8 +25,13 @@ public class Security {
     private OrderBook orderBook = new OrderBook();
     @Builder.Default
     private StopLimitOrderbook stopLimitOrderBook = new StopLimitOrderbook();
+    @Setter
+    @Builder.Default
+    private MatchingState matchingState = MatchingState.CONTINUOUS;
     @Builder.Default
     private int lastTradedPrice = 15000;
+    @Builder.Default
+    private int openingPrice = 15000;
 
     public MatchResult newOrder(EnterOrderRq enterOrderRq, Broker broker, Shareholder shareholder, Matcher matcher) {
         if (enterOrderRq.getSide() == Side.SELL &&
@@ -212,4 +219,8 @@ public class Security {
 
     }
 
+    public MatchResult openAuction(Matcher matcher) {
+        //ToDo
+        return null;
+    }
 }

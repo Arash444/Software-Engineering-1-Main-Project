@@ -1,5 +1,6 @@
 package ir.ramtung.tinyme.messaging.event;
 
+import ir.ramtung.tinyme.domain.entity.Trade;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -18,4 +19,13 @@ public class TradeEvent extends Event {
     private int quantity;
     private long buyID;
     private long sellID;
+
+    public TradeEvent(Trade trade) {
+        time = LocalDateTime.now();
+        securityIsin = getSecurityIsin();
+        price = trade.getPrice();
+        quantity = trade.getQuantity();
+        buyID = trade.getBuy().getOrderId();
+        sellID = trade.getSell().getOrderId();
+    }
 }
