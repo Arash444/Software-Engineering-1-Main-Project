@@ -24,14 +24,16 @@ public class OrderHandler {
     BrokerRepository brokerRepository;
     ShareholderRepository shareholderRepository;
     EventPublisher eventPublisher;
-    Matcher matcher;
+    ContinuousMatcher continuousMatcher;
 
-    public OrderHandler(SecurityRepository securityRepository, BrokerRepository brokerRepository, ShareholderRepository shareholderRepository, EventPublisher eventPublisher, Matcher matcher) {
+    public OrderHandler(SecurityRepository securityRepository, BrokerRepository brokerRepository,
+                        ShareholderRepository shareholderRepository, EventPublisher eventPublisher,
+                        ContinuousMatcher continuousMatcher) {
         this.securityRepository = securityRepository;
         this.brokerRepository = brokerRepository;
         this.shareholderRepository = shareholderRepository;
         this.eventPublisher = eventPublisher;
-        this.matcher = matcher;
+        this.continuousMatcher = continuousMatcher;
     }
 
     private void handleStopLimitOrderActivation(Security security, long requestID) {
@@ -39,8 +41,8 @@ public class OrderHandler {
         while (!ordersToActivate.isEmpty()) {
             StopLimitOrder stopLimitOrder = ordersToActivate.get(0);
             StopLimitOrder originalOrder = (StopLimitOrder) stopLimitOrder.snapshot();
-            MatchResult matchResult = security.activateOrder(originalOrder, stopLimitOrder, matcher);
-            publishRelevantEvent(requestID, stopLimitOrder, matchResult);
+            MatchResult matchResult = security.activateOrder(originalOrder, stopLimitOrder, continuousMatcher);
+            publishRelevantEvents(requestID, stopLimitOrder, matchResult);
             findNewActivatedOrders(security, ordersToActivate, matchResult);
             ordersToActivate.remove(0);
         }
@@ -54,7 +56,7 @@ public class OrderHandler {
         }
     }
 
-    private void publishRelevantEvent(long requestID, StopLimitOrder stopLimitOrder, MatchResult matchResult) {
+    private void publishRelevantEvents(long requestID, StopLimitOrder stopLimitOrder, MatchResult matchResult) {
         if (matchResult.outcome() == MatchingOutcome.EXECUTED) {
             eventPublisher.publish(new OrderActivatedEvent(requestID, stopLimitOrder.getOrderId()));
         } else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
@@ -80,9 +82,9 @@ public class OrderHandler {
 
             MatchResult matchResult;
             if (enterOrderRq.getRequestType() == OrderEntryType.NEW_ORDER)
-                matchResult = security.newOrder(enterOrderRq, broker, shareholder, matcher);
+                matchResult = security.newOrder(enterOrderRq, broker, shareholder, continuousMatcher);
             else
-                matchResult = security.updateOrder(enterOrderRq, matcher);
+                matchResult = security.updateOrder(enterOrderRq, continuousMatcher);
 
             if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
                 eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
