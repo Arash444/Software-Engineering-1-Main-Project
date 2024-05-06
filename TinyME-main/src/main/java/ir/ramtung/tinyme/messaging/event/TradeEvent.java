@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TradeEvent extends Event {
-    private LocalDateTime time;
     private String securityIsin;
     private int price;
     private int quantity;
@@ -21,7 +20,6 @@ public class TradeEvent extends Event {
     private long sellID;
 
     public TradeEvent(Trade trade) {
-        time = LocalDateTime.now();
         securityIsin = getSecurityIsin();
         price = trade.getPrice();
         quantity = trade.getQuantity();

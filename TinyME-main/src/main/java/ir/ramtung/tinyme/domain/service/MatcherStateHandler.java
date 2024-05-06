@@ -8,8 +8,6 @@ import ir.ramtung.tinyme.messaging.request.ChangingMatchingStateRq;
 import ir.ramtung.tinyme.messaging.request.MatchingState;
 import ir.ramtung.tinyme.repository.SecurityRepository;
 
-import java.time.LocalDateTime;
-
 public class MatcherStateHandler {
     SecurityRepository securityRepository;
     EventPublisher eventPublisher;
@@ -31,7 +29,7 @@ public class MatcherStateHandler {
         }
 
         security.setMatchingState(matchingStateRq.getTargetState());
-        eventPublisher.publish(new SecurityStateChangedEvent(LocalDateTime.now(), security.getIsin(), targetState));
+        eventPublisher.publish(new SecurityStateChangedEvent(security.getIsin(), targetState));
 
         if(matchResult != null){
             for (Trade trade : matchResult.trades()){

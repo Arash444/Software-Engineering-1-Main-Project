@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 public class OpeningPriceEvent extends Event {
-    private LocalDateTime time;
     private String securityIsin;
     private int openingPrice;
     private int tradableQuantity;
