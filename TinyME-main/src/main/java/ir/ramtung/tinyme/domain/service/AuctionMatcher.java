@@ -26,8 +26,8 @@ public class AuctionMatcher extends Matcher{
             }
             order.getBroker().decreaseCreditBy(order.getValue());
         }
-        //OrderBook orderBook = order.getSecurity().getOrderBook();
-        //orderBook.enqueue(order);
+        OrderBook orderBook = order.getSecurity().getOrderBook();
+        orderBook.enqueue(order);
         return MatchResult.executed(order, null, lastTradedPrice, false);
     }
 }
