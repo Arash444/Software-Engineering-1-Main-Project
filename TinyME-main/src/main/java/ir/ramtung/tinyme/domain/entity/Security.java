@@ -29,15 +29,13 @@ public class Security {
     @Builder.Default
     private MatchingState matchingState = MatchingState.CONTINUOUS;
     @Builder.Default
-    private int lastTradedPrice = 15000;
-    @Builder.Default
-    private int openingPrice = 15000;
+    private int latestMatchingPrice = 15000;
 
     public MatchResult newOrder(EnterOrderRq enterOrderRq, Broker broker, Shareholder shareholder, Matcher matcher) {
         if (enterOrderRq.getSide() == Side.SELL &&
                 !shareholder.hasEnoughPositionsOn(this,
                 orderBook.totalSellQuantityByShareholder(shareholder) + enterOrderRq.getQuantity()))
-            return MatchResult.notEnoughPositions(lastTradedPrice);
+            return MatchResult.notEnoughPositions(latestMatchingPrice);
         Order order;
         if (enterOrderRq.getPeakSize() != 0)
             order = new IcebergOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
@@ -54,7 +52,7 @@ public class Security {
                     enterOrderRq.getMinimumExecutionQuantity());
 
         MatchResult matchResult = matcher.execute(order, false);
-        lastTradedPrice = matchResult.getLastTradedPrice();
+        latestMatchingPrice = matchResult.getLatestMatchingPrice();
         return matchResult;
     }
     public void deleteOrder(DeleteOrderRq deleteOrderRq) throws InvalidRequestException {
@@ -77,7 +75,7 @@ public class Security {
         if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
             rollbackStopLimitOrder(originalOrder);
         }
-        lastTradedPrice = matchResult.getLastTradedPrice();
+        latestMatchingPrice = matchResult.getLatestMatchingPrice();
         return matchResult;
     }
 
@@ -118,7 +116,7 @@ public class Security {
         if (updateOrderRq.getSide() == Side.SELL &&
                 !order.getShareholder().hasEnoughPositionsOn(this,
                         orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
-            return MatchResult.notEnoughPositions(lastTradedPrice);
+            return MatchResult.notEnoughPositions(latestMatchingPrice);
         boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
                 || updateOrderRq.getPrice() != order.getPrice()
                 || ((order instanceof IcebergOrder icebergOrder) && (icebergOrder.getPeakSize() < updateOrderRq.getPeakSize())
@@ -128,7 +126,7 @@ public class Security {
         order.updateFromRequest(updateOrderRq);
 
         if (!order.canTrade() && (order instanceof StopLimitOrder stopLimitOrder)) {
-            if(stopLimitOrder.hasReachedStopPrice(lastTradedPrice)) {
+            if(stopLimitOrder.hasReachedStopPrice(latestMatchingPrice)) {
                 stopLimitOrderBook.removeByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
                 return activateOrder((StopLimitOrder) originalOrder, stopLimitOrder, matcher);
             }
@@ -140,7 +138,7 @@ public class Security {
             if (updateOrderRq.getSide() == Side.BUY) {
                 order.getBroker().decreaseCreditBy(order.getValue());
             }
-            return MatchResult.executed(null, List.of(), lastTradedPrice, false);
+            return MatchResult.executed(null, List.of(), latestMatchingPrice, false);
         }
         else
             order.markAsNew();
@@ -156,7 +154,7 @@ public class Security {
             }
         }
 
-        lastTradedPrice = matchResult.getLastTradedPrice();
+        latestMatchingPrice = matchResult.getLatestMatchingPrice();
         return matchResult;
     }
 
@@ -184,11 +182,11 @@ public class Security {
 
     public List<StopLimitOrder> findActivatedOrders() {
         List<StopLimitOrder> ordersToActivate = new LinkedList<>();
-        StopLimitOrder activatedOrder = stopLimitOrderBook.findFirstActivatedOrder(lastTradedPrice);
+        StopLimitOrder activatedOrder = stopLimitOrderBook.findFirstActivatedOrder(latestMatchingPrice);
         while (activatedOrder != null) {
             ordersToActivate.add(activatedOrder);
             stopLimitOrderBook.removeFirst(activatedOrder.getSide());
-            activatedOrder = stopLimitOrderBook.findFirstActivatedOrder(lastTradedPrice);
+            activatedOrder = stopLimitOrderBook.findFirstActivatedOrder(latestMatchingPrice);
         }
         return ordersToActivate;
     }

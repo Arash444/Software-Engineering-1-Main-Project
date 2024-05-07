@@ -8,40 +8,40 @@ public final class MatchResult {
     private final MatchingOutcome outcome;
     private final Order remainder;
     private final LinkedList<Trade> trades;
-    private final int lastTradedPrice;
+    private final int latestMatchingPrice;
     private final boolean hasActivatedOrder;
 
 
-    public static MatchResult executed(Order remainder, List<Trade> trades, int lastTradedPrice, boolean hasActivatedOrder) {
-        return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), lastTradedPrice,
+    public static MatchResult executed(Order remainder, List<Trade> trades, int latestMatchingPrice, boolean hasActivatedOrder) {
+        return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), latestMatchingPrice,
                 hasActivatedOrder);
     }
 
-    public static MatchResult notEnoughCredit(int lastTradedPrice) {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_CREDIT, null, new LinkedList<>(), lastTradedPrice,
+    public static MatchResult notEnoughCredit(int latestMatchingPrice) {
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_CREDIT, null, new LinkedList<>(), latestMatchingPrice,
                 false);
     }
-    public static MatchResult notEnoughPositions(int lastTradedPrice) {
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_POSITIONS, null, new LinkedList<>(), lastTradedPrice,
+    public static MatchResult notEnoughPositions(int latestMatchingPrice) {
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_POSITIONS, null, new LinkedList<>(), latestMatchingPrice,
                 false);
     }
-    public static MatchResult notEnoughTradedQuantity(int lastTradedPrice) {
+    public static MatchResult notEnoughTradedQuantity(int latestMatchingPrice) {
         return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>(),
-                lastTradedPrice, false);
+                latestMatchingPrice, false);
     }
-    public static MatchResult stopLimitOrdersCannotEnterAuctions(int lastTradedPrice) {
+    public static MatchResult stopLimitOrdersCannotEnterAuctions(int latestMatchingPrice) {
         return new MatchResult(MatchingOutcome.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS, null, new LinkedList<>(),
-                lastTradedPrice, false);
+                latestMatchingPrice, false);
     }
-    public static MatchResult ordersInAuctionCannotHaveMinimumExecutionQuantity(int lastTradedPrice) {
+    public static MatchResult ordersInAuctionCannotHaveMinimumExecutionQuantity(int latestMatchingPrice) {
         return new MatchResult(MatchingOutcome.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY, null, new LinkedList<>(),
-                lastTradedPrice, false);
+                latestMatchingPrice, false);
     }
-    private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades, int lastTradedPrice, boolean hasActivatedOrder) {
+    private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades, int latestMatchingPrice, boolean hasActivatedOrder) {
         this.outcome = outcome;
         this.remainder = remainder;
         this.trades = trades;
-        this.lastTradedPrice = lastTradedPrice;
+        this.latestMatchingPrice = latestMatchingPrice;
         this.hasActivatedOrder = hasActivatedOrder;
     }
 
@@ -51,8 +51,8 @@ public final class MatchResult {
     public Order remainder() {
         return remainder;
     }
-    public int getLastTradedPrice() {
-        return lastTradedPrice;
+    public int getLatestMatchingPrice() {
+        return latestMatchingPrice;
     }
 
     public LinkedList<Trade> trades() {

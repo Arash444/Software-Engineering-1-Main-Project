@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 @DirtiesContext
 public class StopLimitOrderBookTest {
     private Security security;
-    private List<Order> stopLimitOrders;
     private Broker broker;
     private Shareholder shareholder;
     private LocalDateTime mockedNow;

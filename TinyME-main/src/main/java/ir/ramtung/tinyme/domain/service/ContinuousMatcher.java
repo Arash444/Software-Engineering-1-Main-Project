@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 
 @Service
 public class ContinuousMatcher extends Matcher {
@@ -14,7 +13,7 @@ public class ContinuousMatcher extends Matcher {
     public MatchResult match(Order newOrder) {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
-        int previous_last_traded_price = newOrder.getSecurity().getLastTradedPrice();
+        int previous_last_traded_price = newOrder.getSecurity().getLatestMatchingPrice();
         int last_traded_price = previous_last_traded_price;
         while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0) {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
@@ -53,7 +52,7 @@ public class ContinuousMatcher extends Matcher {
     }
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
-        int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
+        int previous_last_traded_price = order.getSecurity().getLatestMatchingPrice();
         if (!order.canTrade()) {
             StopLimitOrder stopLimitOrder = (StopLimitOrder) order;
             if(!stopLimitOrder.hasReachedStopPrice(previous_last_traded_price))
