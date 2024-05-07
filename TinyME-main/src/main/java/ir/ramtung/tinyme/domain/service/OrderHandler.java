@@ -89,19 +89,28 @@ public class OrderHandler {
                 matchResult = security.updateOrder(enterOrderRq, continuousMatcher);
 
             if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
-                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
+                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
+                        List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
                 return;
             }
             if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
-                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
+                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
+                        List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
                 return;
             }
             if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY) {
-                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
+                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
+                        List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
                 return;
             }
             if (matchResult.outcome() == MatchingOutcome.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS) {
-                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), List.of(Message.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS)));
+                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
+                        List.of(Message.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS)));
+                return;
+            }
+            if (matchResult.outcome() == MatchingOutcome.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY) {
+                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
+                        List.of(Message.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY)));
                 return;
             }
             if (enterOrderRq.getRequestType() == OrderEntryType.NEW_ORDER)

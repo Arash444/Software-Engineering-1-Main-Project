@@ -2,9 +2,13 @@ package ir.ramtung.tinyme.domain.service;
 
 import ir.ramtung.tinyme.domain.entity.MatchResult;
 import ir.ramtung.tinyme.domain.entity.Order;
+import ir.ramtung.tinyme.domain.entity.OrderBook;
 import ir.ramtung.tinyme.domain.entity.Side;
+import org.springframework.stereotype.Service;
 
+@Service
 public class AuctionMatcher extends Matcher{
+    @Override
     public MatchResult match(Order newOrder) {
         //ToDo
         return null;
@@ -22,7 +26,8 @@ public class AuctionMatcher extends Matcher{
             }
             order.getBroker().decreaseCreditBy(order.getValue());
         }
-        order.getSecurity().getOrderBook().enqueue(order);
+        //OrderBook orderBook = order.getSecurity().getOrderBook();
+        //orderBook.enqueue(order);
         return MatchResult.executed(order, null, lastTradedPrice, false);
     }
 }

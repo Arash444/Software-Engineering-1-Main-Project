@@ -33,6 +33,10 @@ public final class MatchResult {
         return new MatchResult(MatchingOutcome.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS, null, new LinkedList<>(),
                 lastTradedPrice, false);
     }
+    public static MatchResult ordersInAuctionCannotHaveMinimumExecutionQuantity(int lastTradedPrice) {
+        return new MatchResult(MatchingOutcome.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY, null, new LinkedList<>(),
+                lastTradedPrice, false);
+    }
     private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades, int lastTradedPrice, boolean hasActivatedOrder) {
         this.outcome = outcome;
         this.remainder = remainder;
