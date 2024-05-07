@@ -837,4 +837,20 @@ public class OrderHandlerTest {
         assertThat(broker3.getCredit()).isEqualTo(1_000_000 + 304*570 + 430*550);
 
     }
+    @Test
+    void reject_new_orders_larger_than_shareholder_position()
+    {
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "ABC", 1,
+                LocalDateTime.now(), Side.SELL, 100_000, 15000, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 0));
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(2, "ABC", 2,
+                LocalDateTime.now(), Side.SELL, 100_000, 15000, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 0));
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(3, "ABC", 3,
+                LocalDateTime.now(), Side.SELL, 100_000, 15000, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 0));
+        verify(eventPublisher).publish(new OrderAcceptedEvent(1, 1));
+        verify(eventPublisher).publish(new OrderRejectedEvent(2, 2, List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
+        verify(eventPublisher).publish(new OrderRejectedEvent(3, 3, List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
+    }
 }
