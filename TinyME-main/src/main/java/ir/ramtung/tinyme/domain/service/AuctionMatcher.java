@@ -20,6 +20,7 @@ public class AuctionMatcher extends Matcher{
     }
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
+        int tradableQuantity = 0; //ToDo fetch the real quantity
         int latestMatchingPrice = order.getSecurity().getLatestMatchingPrice();
         if (!order.canTrade())
             return MatchResult.stopLimitOrdersCannotEnterAuctions(latestMatchingPrice);
@@ -35,9 +36,8 @@ public class AuctionMatcher extends Matcher{
 
         OrderBook orderBook = order.getSecurity().getOrderBook();
         orderBook.enqueue(order);
-
         //int newOpeningPrice = calculateOpeningPrice(orderBook);
-        return MatchResult.executed(order, new LinkedList<>(), latestMatchingPrice, false);
+        return MatchResult.queuedInAuction(order, latestMatchingPrice, tradableQuantity);
     }
 
     /*private int calculateOpeningPrice(OrderBook orderBook) {
