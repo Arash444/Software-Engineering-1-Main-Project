@@ -6,7 +6,10 @@ import ir.ramtung.tinyme.domain.entity.OrderBook;
 import ir.ramtung.tinyme.domain.entity.Side;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 
 @Service
 public class AuctionMatcher extends Matcher{
@@ -33,10 +36,31 @@ public class AuctionMatcher extends Matcher{
         OrderBook orderBook = order.getSecurity().getOrderBook();
         orderBook.enqueue(order);
 
-        return MatchResult.executed(order, new LinkedList<>(), calculateOpeningPrice(), false);
+        //int newOpeningPrice = calculateOpeningPrice(orderBook);
+        return MatchResult.executed(order, new LinkedList<>(), latestMatchingPrice, false);
     }
 
-    private int calculateOpeningPrice() {
-        return 0;
+    /*private int calculateOpeningPrice(OrderBook orderBook) {
+        List<Integer> orderPrices = findAllOrderPrices(orderBook);
+        int maxTradebleQuantity = 0, newOpeningPrice = 0;
+        for (int openingPrice : orderPrices){
+            int tradebleQuantity = findTradableQuantity();
+            if(tradebleQuantity > maxTradebleQuantity) {
+                maxTradebleQuantity = tradebleQuantity;
+                newOpeningPrice = openingPrice;
+            }
+        }
+        return newOpeningPrice, maxTradebleQuantity;
+    }*/
+    private List<Integer> findAllOrderPrices(OrderBook orderBook){
+        List<Integer> orderPrices = new ArrayList<>();
+        for(Order buyOrder : orderBook.getBuyQueue()){
+            orderPrices.add(buyOrder.getPrice());
+        }
+        for(Order sellOrder : orderBook.getSellQueue()){
+            orderPrices.add(sellOrder.getPrice());
+        }
+        Collections.sort(orderPrices);
+        return orderPrices;
     }
 }
