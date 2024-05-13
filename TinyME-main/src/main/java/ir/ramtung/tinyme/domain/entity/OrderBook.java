@@ -103,4 +103,11 @@ public class OrderBook {
         }
         return matchingOrders;
     }
+    public Order matchWithFirstWithPrice(Side side, int price) {
+        var queue = getQueue(side.opposite());
+        if (queue.getFirst().matchesWithPrice(price))
+            return queue.getFirst();
+        else
+            return null;
+    }
 }

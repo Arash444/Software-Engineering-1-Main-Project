@@ -39,13 +39,11 @@ public class MatcherStateHandler {
         }
 
         MatchingState currentState = security.getMatchingState();
-        if(shouldOpenAuction(currentState, targetState)){
+        if(shouldOpenAuction(currentState, targetState))
             matchResult = security.openAuction(matcher);
-        }
         security.setMatchingState(matchingStateRq.getTargetState());
 
         publishChangingMatchingStateRqEvents(targetState, security, matchResult);
-        //ToDo: See if the opening price has to be published when we change from one state to another
     }
     private void validateChangingMatchingStateRq(ChangingMatchingStateRq matchingStateRq) throws InvalidRequestException {
         List<String> errors = new LinkedList<>();
@@ -63,9 +61,8 @@ public class MatcherStateHandler {
 
     private void publishTradeEvents(MatchResult matchResult) {
         if(matchResult != null){
-            for (Trade trade : matchResult.trades()){
+            for (Trade trade : matchResult.trades())
                 eventPublisher.publish(new TradeEvent(trade));
-            }
         }
     }
 

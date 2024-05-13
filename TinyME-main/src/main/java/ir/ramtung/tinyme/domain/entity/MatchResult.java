@@ -13,10 +13,15 @@ public final class MatchResult {
     private final int tradableQuantity;
 
 
-    public static MatchResult executed(Order remainder, List<Trade> trades, int latestMatchingPrice,
-                                       boolean hasActivatedOrder) {
+    public static MatchResult executedContinuous(Order remainder, List<Trade> trades, int latestMatchingPrice,
+                                                 boolean hasActivatedOrder) {
         return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(trades), latestMatchingPrice,
                 hasActivatedOrder, 0);
+    }
+    public static MatchResult executedAuction(List<Trade> trades, int latestMatchingPrice,
+                                                 int tradableQuantity) {
+        return new MatchResult(MatchingOutcome.EXECUTED, null, new LinkedList<>(trades), latestMatchingPrice,
+                false, tradableQuantity);
     }
     public static MatchResult queuedInAuction(Order remainder, int latestMatchingPrice, int tradableQuantity) {
         return new MatchResult(MatchingOutcome.QUEUED_IN_AUCTION, remainder, new LinkedList<>(), latestMatchingPrice,

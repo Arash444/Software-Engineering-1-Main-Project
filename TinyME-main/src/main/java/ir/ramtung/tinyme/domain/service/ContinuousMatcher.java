@@ -5,11 +5,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 
 @Service
 public class ContinuousMatcher extends Matcher {
     private boolean hasActivatedOrder = false;
-    @Override
     public MatchResult match(Order newOrder) {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
@@ -48,7 +48,7 @@ public class ContinuousMatcher extends Matcher {
                 newOrder.makeQuantityZero();
             }
         }
-        return MatchResult.executed(newOrder, trades, last_traded_price, hasActivatedOrder);
+        return MatchResult.executedContinuous(newOrder, trades, last_traded_price, hasActivatedOrder);
     }
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
@@ -95,7 +95,26 @@ public class ContinuousMatcher extends Matcher {
         return result;
     }
 
+    private void rollbackTradesBuy(Order newOrder, LinkedList<Trade> trades) {
+        assert newOrder.getSide() == Side.BUY;
+        newOrder.getBroker().increaseCreditBy(trades.stream().mapToLong(Trade::getTradedValue).sum());
+        trades.forEach(trade -> trade.getSell().getBroker().decreaseCreditBy(trade.getTradedValue()));
 
+        ListIterator<Trade> it = trades.listIterator(trades.size());
+        while (it.hasPrevious()) {
+            newOrder.getSecurity().getOrderBook().restoreSellOrder(it.previous().getSell());
+        }
+    }
+
+    private void rollbackTradesSell(Order newOrder, LinkedList<Trade> trades) {
+        assert newOrder.getSide() == Side.SELL;
+        newOrder.getBroker().decreaseCreditBy(trades.stream().mapToLong(Trade::getTradedValue).sum());
+
+        ListIterator<Trade> it = trades.listIterator(trades.size());
+        while (it.hasPrevious()) {
+            newOrder.getSecurity().getOrderBook().restoreBuyOrder(it.previous().getBuy());
+        }
+    }
     private MatchResult handleNonActivatedOrder(StopLimitOrder stopLimitOrder, int previous_last_traded_price) {
         if (stopLimitOrder.getSide() == Side.BUY) {
             if (!stopLimitOrder.getBroker().hasEnoughCredit(stopLimitOrder.getValue())) {
@@ -104,7 +123,7 @@ public class ContinuousMatcher extends Matcher {
             stopLimitOrder.getBroker().decreaseCreditBy(stopLimitOrder.getValue());
         }
         stopLimitOrder.getSecurity().getStopLimitOrderBook().enqueue(stopLimitOrder);
-        return MatchResult.executed(stopLimitOrder, List.of(), previous_last_traded_price, false);
+        return MatchResult.executedContinuous(stopLimitOrder, List.of(), previous_last_traded_price, false);
     }
 
 }

@@ -138,7 +138,7 @@ public class Security {
             if (updateOrderRq.getSide() == Side.BUY) {
                 order.getBroker().decreaseCreditBy(order.getValue());
             }
-            return MatchResult.executed(null, List.of(), latestMatchingPrice, false);
+            return MatchResult.executedContinuous(null, List.of(), latestMatchingPrice, false);
         }
         else
             order.markAsNew();
@@ -218,7 +218,6 @@ public class Security {
     }
 
     public MatchResult openAuction(Matcher matcher) {
-        //ToDo
-        return null;
+        return matcher.matchAllOrders(this);
     }
 }
