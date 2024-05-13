@@ -71,15 +71,4 @@ public class AuctionMatcher extends Matcher{
     private static boolean brokerDoesNotHaveEnoughCredit(Order order) {
         return order.getSide() == Side.BUY && !order.getBroker().hasEnoughCredit(order.getValue());
     }
-    /*private List<Integer> findAllOrderPrices(OrderBook orderBook){
-        List<Integer> orderPrices = new ArrayList<>();
-        for(Order buyOrder : orderBook.getBuyQueue()){
-            orderPrices.add(buyOrder.getPrice());
-        }
-        for(Order sellOrder : orderBook.getSellQueue()){
-            orderPrices.add(sellOrder.getPrice());
-        }
-        Collections.sort(orderPrices);
-        return orderPrices;
-    }*/
 }
