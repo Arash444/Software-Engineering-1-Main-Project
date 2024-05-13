@@ -20,7 +20,6 @@ public class AuctionMatcher extends Matcher{
     }
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
-        int tradableQuantity = 0; //ToDo fetch the real quantity
         int latestMatchingPrice = order.getSecurity().getLatestMatchingPrice();
         if (!order.canTrade())
             return MatchResult.stopLimitOrdersCannotEnterAuctions(latestMatchingPrice);
@@ -36,23 +35,41 @@ public class AuctionMatcher extends Matcher{
 
         OrderBook orderBook = order.getSecurity().getOrderBook();
         orderBook.enqueue(order);
-        //int newOpeningPrice = calculateOpeningPrice(orderBook);
-        return MatchResult.queuedInAuction(order, latestMatchingPrice, tradableQuantity);
+        int newOpeningPrice = calculateOpeningPrice(orderBook);
+        int tradableQuantity = calculateTradableQuantity(newOpeningPrice, orderBook);
+        return MatchResult.queuedInAuction(order, newOpeningPrice, tradableQuantity);
     }
 
-    /*private int calculateOpeningPrice(OrderBook orderBook) {
-        List<Integer> orderPrices = findAllOrderPrices(orderBook);
+    private int calculateOpeningPrice(OrderBook orderBook) {
         int maxTradebleQuantity = 0, newOpeningPrice = 0;
-        for (int openingPrice : orderPrices){
-            int tradebleQuantity = findTradableQuantity();
+        int lowestPrice = orderBook.getLowestPriorityOrderPrice(Side.BUY);
+        int highestPrice = orderBook.getLowestPriorityOrderPrice(Side.SELL);
+
+        for (int openingPrice = lowestPrice; openingPrice <= highestPrice; openingPrice++){
+            int tradebleQuantity = calculateTradableQuantity(openingPrice, orderBook);
             if(tradebleQuantity > maxTradebleQuantity) {
                 maxTradebleQuantity = tradebleQuantity;
                 newOpeningPrice = openingPrice;
             }
         }
-        return newOpeningPrice, maxTradebleQuantity;
-    }*/
-    private List<Integer> findAllOrderPrices(OrderBook orderBook){
+
+        return newOpeningPrice;
+    }
+
+    private int calculateTradableQuantity(int newOpeningPrice, OrderBook orderBook) {
+        LinkedList<Order> matchingBuyOrders = orderBook.findAllMatchingOrdersWithPrice(newOpeningPrice, Side.BUY);
+        LinkedList<Order> matchingSellOrders = orderBook.findAllMatchingOrdersWithPrice(newOpeningPrice, Side.SELL);
+
+        int totalBuyQuantity = matchingBuyOrders.stream()
+                .mapToInt(Order::getQuantity)
+                .sum();
+        int totalSellQuantity = matchingSellOrders.stream()
+                .mapToInt(Order::getQuantity)
+                .sum();
+
+        return Math.min(totalBuyQuantity, totalSellQuantity);
+    }
+    /*private List<Integer> findAllOrderPrices(OrderBook orderBook){
         List<Integer> orderPrices = new ArrayList<>();
         for(Order buyOrder : orderBook.getBuyQueue()){
             orderPrices.add(buyOrder.getPrice());
@@ -62,5 +79,5 @@ public class AuctionMatcher extends Matcher{
         }
         Collections.sort(orderPrices);
         return orderPrices;
-    }
+    }*/
 }
