@@ -20,21 +20,22 @@ public class AuctionMatcher extends Matcher{
     }
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
-        int latestMatchingPrice = order.getSecurity().getLatestMatchingPrice();
-
-        if (order.getSide() == Side.BUY) {
-            if (!order.getBroker().hasEnoughCredit(order.getValue())) {
-                    return MatchResult.notEnoughCredit(latestMatchingPrice);
-            }
-            order.getBroker().decreaseCreditBy(order.getValue());
-        }
+        if (brokerDoesNotHaveEnoughCredit(order))
+            return MatchResult.notEnoughCredit(order.getSecurity().getLatestMatchingPrice());
 
         OrderBook orderBook = order.getSecurity().getOrderBook();
+
+        adjustBrokerCredit(order);
         orderBook.enqueue(order);
         //ToDo what happens when there's no orders in the orderbook or when none of them match?
         int newOpeningPrice = calculateOpeningPrice(orderBook);
         int tradableQuantity = calculateTradableQuantity(newOpeningPrice, orderBook);
         return MatchResult.queuedInAuction(order, newOpeningPrice, tradableQuantity);
+    }
+
+    private static void adjustBrokerCredit(Order order) {
+        if (order.getSide() == Side.BUY)
+            order.getBroker().decreaseCreditBy(order.getValue());
     }
 
     private int calculateOpeningPrice(OrderBook orderBook) {
@@ -65,6 +66,10 @@ public class AuctionMatcher extends Matcher{
                 .sum();
 
         return Math.min(totalBuyQuantity, totalSellQuantity);
+    }
+
+    private static boolean brokerDoesNotHaveEnoughCredit(Order order) {
+        return order.getSide() == Side.BUY && !order.getBroker().hasEnoughCredit(order.getValue());
     }
     /*private List<Integer> findAllOrderPrices(OrderBook orderBook){
         List<Integer> orderPrices = new ArrayList<>();
