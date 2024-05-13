@@ -114,6 +114,9 @@ public class OrderHandler {
                 eventPublisher.publish(new OrderExecutedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
                 handleStopLimitOrderActivation(security, enterOrderRq.getRequestId());
             }
+            if (security.getMatchingState() == MatchingState.AUCTION)
+                eventPublisher.publish(new OpeningPriceEvent(security.getIsin(), matchResult.getLatestMatchingPrice(),
+                        matchResult.getTradableQuantity()));
 
         } catch (InvalidRequestException ex) {
             eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), ex.getReasons()));
