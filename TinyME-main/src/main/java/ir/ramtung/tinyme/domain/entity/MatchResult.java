@@ -34,14 +34,6 @@ public final class MatchResult {
         return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>(),
                 latestMatchingPrice, false, 0);
     }
-    public static MatchResult stopLimitOrdersCannotEnterAuctions(int latestMatchingPrice) {
-        return new MatchResult(MatchingOutcome.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS, null, new LinkedList<>(),
-                latestMatchingPrice, false, 0);
-    }
-    public static MatchResult ordersInAuctionCannotHaveMinimumExecutionQuantity(int latestMatchingPrice) {
-        return new MatchResult(MatchingOutcome.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY, null, new LinkedList<>(),
-                latestMatchingPrice, false, 0);
-    }
     private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades,
                         int latestMatchingPrice, boolean hasActivatedOrder, int tradableQuantity) {
         this.outcome = outcome;
@@ -60,6 +52,9 @@ public final class MatchResult {
     }
     public int getLatestMatchingPrice() {
         return latestMatchingPrice;
+    }
+    public int getTradableQuantity() {
+        return tradableQuantity;
     }
 
     public LinkedList<Trade> trades() {

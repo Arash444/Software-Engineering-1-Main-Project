@@ -8,6 +8,7 @@ import ir.ramtung.tinyme.messaging.TradeDTO;
 import ir.ramtung.tinyme.messaging.event.*;
 import ir.ramtung.tinyme.messaging.request.DeleteOrderRq;
 import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
+import ir.ramtung.tinyme.messaging.request.MatchingState;
 import ir.ramtung.tinyme.messaging.request.OrderEntryType;
 import ir.ramtung.tinyme.repository.BrokerRepository;
 import ir.ramtung.tinyme.repository.SecurityRepository;
@@ -103,16 +104,6 @@ public class OrderHandler {
                         List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
                 return;
             }
-            if (matchResult.outcome() == MatchingOutcome.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS) {
-                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
-                        List.of(Message.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS)));
-                return;
-            }
-            if (matchResult.outcome() == MatchingOutcome.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY) {
-                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
-                        List.of(Message.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY)));
-                return;
-            }
             if (enterOrderRq.getRequestType() == OrderEntryType.NEW_ORDER)
                 eventPublisher.publish(new OrderAcceptedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
             else
@@ -166,6 +157,8 @@ public class OrderHandler {
                 errors.add(Message.QUANTITY_NOT_MULTIPLE_OF_LOT_SIZE);
             if (enterOrderRq.getPrice() % security.getTickSize() != 0)
                 errors.add(Message.PRICE_NOT_MULTIPLE_OF_TICK_SIZE);
+            if (security.getMatchingState() == MatchingState.AUCTION)
+                errors.addAll(auctionLimitationErrors(enterOrderRq));
         }
         if (brokerRepository.findBrokerById(enterOrderRq.getBrokerId()) == null)
             errors.add(Message.UNKNOWN_BROKER_ID);
@@ -175,6 +168,15 @@ public class OrderHandler {
             errors.add(Message.INVALID_PEAK_SIZE);
         if (!errors.isEmpty())
             throw new InvalidRequestException(errors);
+    }
+
+    private List<String> auctionLimitationErrors(EnterOrderRq enterOrderRq) {
+        List<String> errors = new LinkedList<>();
+        if (enterOrderRq.getStopPrice() != 0)
+            errors.add(Message.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS);
+        if (enterOrderRq.getMinimumExecutionQuantity() != 0)
+            errors.add(Message.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY);
+        return errors;
     }
 
     private void validateDeleteOrderRq(DeleteOrderRq deleteOrderRq) throws InvalidRequestException {

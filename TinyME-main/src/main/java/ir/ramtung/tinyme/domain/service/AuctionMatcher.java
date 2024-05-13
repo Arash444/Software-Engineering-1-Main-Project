@@ -21,10 +21,6 @@ public class AuctionMatcher extends Matcher{
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
         int latestMatchingPrice = order.getSecurity().getLatestMatchingPrice();
-        if (!order.canTrade())
-            return MatchResult.stopLimitOrdersCannotEnterAuctions(latestMatchingPrice);
-        if (order.getMinimumExecutionQuantity() != 0)
-            return MatchResult.ordersInAuctionCannotHaveMinimumExecutionQuantity(latestMatchingPrice);
 
         if (order.getSide() == Side.BUY) {
             if (!order.getBroker().hasEnoughCredit(order.getValue())) {
@@ -35,6 +31,7 @@ public class AuctionMatcher extends Matcher{
 
         OrderBook orderBook = order.getSecurity().getOrderBook();
         orderBook.enqueue(order);
+        //ToDo what happens when there's no orders in the orderbook or when none of them match?
         int newOpeningPrice = calculateOpeningPrice(orderBook);
         int tradableQuantity = calculateTradableQuantity(newOpeningPrice, orderBook);
         return MatchResult.queuedInAuction(order, newOpeningPrice, tradableQuantity);
