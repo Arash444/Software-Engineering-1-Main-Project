@@ -11,11 +11,10 @@ public class AuctionMatcher extends Matcher{
         int openingPrice = security.getLatestMatchingPrice(), tradableQuantity = 0;
         OrderBook orderBook = security.getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
-        LinkedList<Order> sellQueue = orderBook.getSellQueue();
+        int sellOrderCount = orderBook.getSellQueue().size();
         boolean isMatchingOver = false;
-
-        while(!isMatchingOver && !sellQueue.isEmpty()) {
-            Order newOrder = sellQueue.getFirst();
+        while(!isMatchingOver && sellOrderCount != 0) {
+            Order newOrder = orderBook.getSellQueue().getFirst();
             while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0) {
                 Order matchingOrder = orderBook.matchWithFirstWithPrice(newOrder.getSide(), openingPrice);
                 if (matchingOrder == null) {
@@ -24,40 +23,16 @@ public class AuctionMatcher extends Matcher{
                 }
 
                 int tradeQuantity = Math.min(newOrder.getQuantity(), matchingOrder.getQuantity());
+                addNewTrade(openingPrice, trades, newOrder, matchingOrder, tradeQuantity);
                 tradableQuantity += tradeQuantity;
-                Trade trade = new Trade(newOrder.getSecurity(), openingPrice, tradeQuantity
-                        , newOrder, matchingOrder);
-                trade.increaseSellersCredit();
-                trades.add(trade);
-                
-                decreaseCreditOfBuyOrderBroker(newOrder, matchingOrder, openingPrice, tradeQuantity);
 
-                if (newOrder.getQuantity() >= matchingOrder.getQuantity()) {
-                    newOrder.decreaseQuantity(matchingOrder.getQuantity());
-                    orderBook.removeFirst(matchingOrder.getSide());
-                    if (matchingOrder instanceof IcebergOrder icebergOrder) {
-                        icebergOrder.decreaseQuantity(matchingOrder.getQuantity());
-                        icebergOrder.replenish();
-                        if (icebergOrder.getQuantity() > 0)
-                            orderBook.enqueue(icebergOrder);
-                    }
-                } else {
-                    matchingOrder.decreaseQuantity(newOrder.getQuantity());
-                    newOrder.makeQuantityZero();
-                }
+                adjustCreditOfBuyOrderBroker(matchingOrder, Math.abs(tradeQuantity * (openingPrice - newOrder.getPrice())));
+                adjustOrderQuantityRemoveSmallerOrder(orderBook, newOrder, matchingOrder);
             }
-            sellQueue.removeFirst();
+            sellOrderCount--;
         }
 
         return MatchResult.executedAuction(trades, openingPrice, tradableQuantity);
-    }
-
-    private void decreaseCreditOfBuyOrderBroker(Order newOrder, Order matchingOrder,
-                                                int openingPrice, int tradeQuantity) {
-        if (newOrder.getSide() == Side.BUY)
-            newOrder.getBroker().increaseCreditBy(Math.abs(tradeQuantity * (openingPrice - newOrder.getPrice())));
-        else if (matchingOrder.getSide() == Side.BUY)
-            matchingOrder.getBroker().increaseCreditBy(Math.abs(tradeQuantity * (openingPrice - newOrder.getPrice())));
     }
 
     @Override
@@ -110,7 +85,35 @@ public class AuctionMatcher extends Matcher{
         return Math.min(totalBuyQuantity, totalSellQuantity);
     }
 
-    private static boolean brokerDoesNotHaveEnoughCredit(Order order) {
-        return order.getSide() == Side.BUY && !order.getBroker().hasEnoughCredit(order.getValue());
+    private void adjustCreditOfBuyOrderBroker(Order order, long creditChange) {
+        if (order.getSide() == Side.BUY)
+            order.getBroker().increaseCreditBy(creditChange);
     }
+
+    @Override
+    protected void adjustOrderQuantityRemoveSmallerOrder(OrderBook orderBook, Order newOrder, Order matchingOrder) {
+        if (newOrder.getQuantity() > matchingOrder.getQuantity()) {
+            decreaseOrderQuantity(newOrder, matchingOrder, matchingOrder.getQuantity());
+            removeZeroQuantityOrder(orderBook, matchingOrder);
+            replenishIcebergOrder(orderBook, matchingOrder);
+        }
+        else if (newOrder.getQuantity() < matchingOrder.getQuantity()) {
+            decreaseOrderQuantity(matchingOrder, newOrder, newOrder.getQuantity());
+            removeZeroQuantityOrder(orderBook, newOrder);
+            replenishIcebergOrder(orderBook, newOrder);
+        }
+        else{
+            decreaseOrderQuantity(matchingOrder, newOrder, newOrder.getQuantity());
+            removeZeroQuantityOrder(orderBook, newOrder);
+            removeZeroQuantityOrder(orderBook, matchingOrder);
+            replenishIcebergOrder(orderBook, newOrder);
+            replenishIcebergOrder(orderBook, matchingOrder);
+        }
+    }
+
+    private void decreaseOrderQuantity(Order newOrder, Order matchingOrder, int quantity) {
+        newOrder.decreaseQuantity(quantity);
+        matchingOrder.decreaseQuantity(quantity);
+    }
+
 }

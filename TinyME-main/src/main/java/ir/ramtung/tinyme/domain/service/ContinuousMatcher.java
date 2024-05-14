@@ -22,31 +22,15 @@ public class ContinuousMatcher extends Matcher {
 
             Trade trade = new Trade(newOrder.getSecurity(), matchingOrder.getPrice(),
                     Math.min(newOrder.getQuantity(), matchingOrder.getQuantity()), newOrder, matchingOrder);
-            if (newOrder.getSide() == Side.BUY) {
-                if (trade.buyerHasEnoughCredit())
-                    trade.decreaseBuyersCredit();
-                else {
-                    rollbackTradesBuy(newOrder, trades);
-                    return MatchResult.notEnoughCredit(previous_last_traded_price);
-                }
+            if (newOrder.getSide() == Side.BUY && !trade.buyerHasEnoughCredit()){
+                rollbackTradesBuy(newOrder, trades);
+                return MatchResult.notEnoughCredit(previous_last_traded_price);
             }
-            trade.increaseSellersCredit();
-            trades.add(trade);
+            addNewTrade(matchingOrder.getPrice(), trades, newOrder, matchingOrder,
+                    Math.min(newOrder.getQuantity(), matchingOrder.getQuantity()));
             last_traded_price = matchingOrder.getPrice();
-
-            if (newOrder.getQuantity() >= matchingOrder.getQuantity()) {
-                newOrder.decreaseQuantity(matchingOrder.getQuantity());
-                orderBook.removeFirst(matchingOrder.getSide());
-                if (matchingOrder instanceof IcebergOrder icebergOrder) {
-                    icebergOrder.decreaseQuantity(matchingOrder.getQuantity());
-                    icebergOrder.replenish();
-                    if (icebergOrder.getQuantity() > 0)
-                        orderBook.enqueue(icebergOrder);
-                }
-            } else {
-                matchingOrder.decreaseQuantity(newOrder.getQuantity());
-                newOrder.makeQuantityZero();
-            }
+            adjustCreditOfBuyOrderBroker(newOrder, trade);
+            adjustOrderQuantityRemoveSmallerOrder(orderBook, newOrder, matchingOrder);
         }
         return MatchResult.executedContinuous(newOrder, trades, last_traded_price, hasActivatedOrder);
     }
@@ -93,6 +77,23 @@ public class ContinuousMatcher extends Matcher {
             }
         }
         return result;
+    }
+    private void adjustCreditOfBuyOrderBroker(Order order, Trade trade) {
+        if (order.getSide() == Side.BUY) {
+            trade.decreaseBuyersCredit();
+        }
+    }
+
+    protected void adjustOrderQuantityRemoveSmallerOrder(OrderBook orderBook, Order newOrder, Order matchingOrder) {
+        if (newOrder.getQuantity() >= matchingOrder.getQuantity()) {
+            newOrder.decreaseQuantity(matchingOrder.getQuantity());
+            removeZeroQuantityOrder(orderBook, matchingOrder);
+            replenishIcebergOrder(orderBook, matchingOrder);
+        } else {
+            matchingOrder.decreaseQuantity(newOrder.getQuantity());
+            newOrder.makeQuantityZero();
+        }
+
     }
 
     private void rollbackTradesBuy(Order newOrder, LinkedList<Trade> trades) {

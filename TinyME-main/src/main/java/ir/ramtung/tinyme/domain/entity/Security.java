@@ -28,6 +28,7 @@ public class Security {
     @Setter
     @Builder.Default
     private MatchingState matchingState = MatchingState.CONTINUOUS;
+    @Setter //only for test
     @Builder.Default
     private int latestMatchingPrice = 15000;
 
