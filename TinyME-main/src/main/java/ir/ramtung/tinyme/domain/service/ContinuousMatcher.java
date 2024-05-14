@@ -23,18 +23,24 @@ public class ContinuousMatcher extends Matcher {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
                 break;
-            addNewTrade(matchingOrder.getPrice(), trades, newOrder, matchingOrder,
-                    Math.min(newOrder.getQuantity(), matchingOrder.getQuantity()));
+            int tradeQuantity = Math.min(newOrder.getQuantity(), matchingOrder.getQuantity());
+            addNewTrade(matchingOrder.getPrice(), trades, newOrder, matchingOrder, tradeQuantity);
             if (newOrder.getSide() == Side.BUY && !trades.getLast().buyerHasEnoughCredit()){
                 rollbackTradesBuy(newOrder, trades);
                 return MatchResult.notEnoughCredit(previous_last_traded_price);
             }
             last_traded_price = matchingOrder.getPrice();
-            decreaseBuyBrokerCredit(newOrder, trades.getLast());
-            decreaseOrderQuantity(newOrder, matchingOrder);
-            removeSmallerOrder(orderBook, newOrder, matchingOrder);
+            matchTheTwoOrders(-1, orderBook, trades,
+                    matchingOrder, newOrder, -1);
         }
         return MatchResult.executedContinuous(newOrder, trades, last_traded_price, hasActivatedOrder);
+    }
+    @Override
+    protected void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades,
+                                     Order matchingOrder, Order newOrder, int tradeQuantity) {
+        decreaseBuyBrokerCredit(newOrder, trades.getLast());
+        decreaseOrderQuantity(newOrder, matchingOrder);
+        removeSmallerOrder(orderBook, newOrder, matchingOrder);
     }
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {

@@ -11,6 +11,7 @@ public abstract class Matcher {
     public abstract MatchResult execute(Order order, Boolean isAmendOrder);
     public abstract MatchResult match(Security security, Order order);
     protected abstract void removeSmallerOrder(OrderBook orderBook, Order order1, Order order2);
+    protected abstract void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades, Order order1, Order order2, int tradeQuantity);
     protected void replenishIcebergOrder(OrderBook orderBook, Order order) {
         if (order instanceof IcebergOrder icebergOrder) {
             icebergOrder.decreaseQuantity(order.getQuantity());

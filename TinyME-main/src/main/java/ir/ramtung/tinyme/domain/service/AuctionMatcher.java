@@ -28,17 +28,20 @@ public class AuctionMatcher extends Matcher{
                     break;
                 }
                 int tradeQuantity = Math.min(sellOrder.getQuantity(), buyOrder.getQuantity());
-                addNewTrade(openingPrice, trades, sellOrder, buyOrder, tradeQuantity);
                 tradableQuantity += tradeQuantity;
-
-                increaseBuyBrokerCredit(buyOrder, Math.abs(tradeQuantity * (openingPrice - sellOrder.getPrice())));
-                decreaseOrderQuantity(sellOrder, buyOrder);
-                removeSmallerOrder(orderBook, sellOrder, buyOrder);
+                matchTheTwoOrders(openingPrice, orderBook, trades, sellOrder, buyOrder, tradeQuantity);
             }
             sellQueueCopy.removeFirst();
         }
 
         return MatchResult.executedAuction(trades, openingPrice, tradableQuantity);
+    }
+    @Override
+    protected void matchTheTwoOrders(int openingPrice, OrderBook orderBook, LinkedList<Trade> trades, Order sellOrder, Order buyOrder, int tradeQuantity) {
+        addNewTrade(openingPrice, trades, sellOrder, buyOrder, tradeQuantity);
+        increaseBuyBrokerCredit(buyOrder, Math.abs(tradeQuantity * (openingPrice - sellOrder.getPrice())));
+        decreaseOrderQuantity(sellOrder, buyOrder);
+        removeSmallerOrder(orderBook, sellOrder, buyOrder);
     }
 
     private boolean isAuctionOver(boolean isMatchingOver, LinkedList<Order> sellQueueCopy, OrderBook orderBook) {
