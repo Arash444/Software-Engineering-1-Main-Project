@@ -49,7 +49,7 @@ public class AuctionMatcherTest {
         orders.forEach(order -> orderBook.enqueue(order));
         Trade trade = new Trade(security, 15600, 65, orders.get(0), orders.get(2));
         security.setLatestMatchingPrice(15600);
-        MatchResult result = auctionMatcher.matchAllOrders(security);
+        MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade);
         assertThat(result.getTradableQuantity()).isEqualTo(65);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(239);
@@ -66,7 +66,7 @@ public class AuctionMatcherTest {
         orders.forEach(order -> orderBook.enqueue(order));
         Trade trade = new Trade(security, 15500, 300, orders.get(0), orders.get(1));
         security.setLatestMatchingPrice(15500);
-        MatchResult result = auctionMatcher.matchAllOrders(security);
+        MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade);
         assertThat(result.getTradableQuantity()).isEqualTo(300);
         assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isEqualTo(true);

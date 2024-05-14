@@ -9,10 +9,8 @@ import java.util.LinkedList;
 public abstract class Matcher {
 
     public abstract MatchResult execute(Order order, Boolean isAmendOrder);
-    public MatchResult matchAllOrders(Security security) {
-        return null;
-    }
-    protected abstract void adjustOrderQuantityRemoveSmallerOrder(OrderBook orderBook, Order newOrder, Order matchingOrder);
+    public abstract MatchResult match(Security security, Order order);
+    protected abstract void removeSmallerOrder(OrderBook orderBook, Order order1, Order order2);
     protected void replenishIcebergOrder(OrderBook orderBook, Order order) {
         if (order instanceof IcebergOrder icebergOrder) {
             icebergOrder.decreaseQuantity(order.getQuantity());
@@ -26,13 +24,30 @@ public abstract class Matcher {
         trade.increaseSellersCredit();
         trades.add(trade);
     }
+
+    protected void decreaseOrderQuantity(Order order1, Order order2) {
+        int minQuantity = Math.min(order1.getQuantity(), order2.getQuantity());
+        order1.decreaseQuantity(minQuantity);
+        order2.decreaseQuantity(minQuantity);
+    }
+    protected void removeZeroQuantityOrder(OrderBook orderBook, Order order) {
+        orderBook.removeFirst(order.getSide());
+        replenishIcebergOrder(orderBook, order);
+    }
     protected boolean brokerDoesNotHaveEnoughCredit(Order order) {
         return order.getSide() == Side.BUY && !order.getBroker().hasEnoughCredit(order.getValue());
     }
-
-    protected void removeZeroQuantityOrder(OrderBook orderBook, Order order) {
-        orderBook.removeFirst(order.getSide());
-        order.makeQuantityZero();
+    protected void decreaseBuyBrokerCredit(Order order) {
+        if (order.getSide() == Side.BUY)
+            order.getBroker().decreaseCreditBy(order.getValue());
+    }
+    protected void decreaseBuyBrokerCredit(Order order, Trade trade) {
+        if (order.getSide() == Side.BUY)
+            trade.decreaseBuyersCredit();
+    }
+    protected void increaseBuyBrokerCredit(Order order, long creditChange) {
+        if (order.getSide() == Side.BUY)
+            order.getBroker().increaseCreditBy(creditChange);
     }
 
 }

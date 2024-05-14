@@ -19,12 +19,12 @@ import java.util.List;
 public class MatcherStateHandler {
     SecurityRepository securityRepository;
     EventPublisher eventPublisher;
-    Matcher matcher;
+    ContinuousMatcher continuousMatcher;
+    AuctionMatcher auctionMatcher;
 
     public MatcherStateHandler(SecurityRepository securityRepository, EventPublisher eventPublisher, Matcher matcher) {
         this.securityRepository = securityRepository;
         this.eventPublisher = eventPublisher;
-        this.matcher = matcher;
     }
     public void handleChangingMatchingStateRq(ChangingMatchingStateRq matchingStateRq){
         MatchResult matchResult = null;
@@ -40,7 +40,7 @@ public class MatcherStateHandler {
 
         MatchingState currentState = security.getMatchingState();
         if(shouldOpenAuction(currentState, targetState))
-            matchResult = security.openAuction(matcher);
+            matchResult = security.openAuction(auctionMatcher);
         security.setMatchingState(matchingStateRq.getTargetState());
 
         publishChangingMatchingStateRqEvents(targetState, security, matchResult);

@@ -10,6 +10,10 @@ import java.util.ListIterator;
 @Service
 public class ContinuousMatcher extends Matcher {
     private boolean hasActivatedOrder = false;
+    @Override
+    public MatchResult match(Security security, Order order){
+        return this.match(order);
+    }
     public MatchResult match(Order newOrder) {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
@@ -19,18 +23,16 @@ public class ContinuousMatcher extends Matcher {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
                 break;
-
-            Trade trade = new Trade(newOrder.getSecurity(), matchingOrder.getPrice(),
-                    Math.min(newOrder.getQuantity(), matchingOrder.getQuantity()), newOrder, matchingOrder);
-            if (newOrder.getSide() == Side.BUY && !trade.buyerHasEnoughCredit()){
+            addNewTrade(matchingOrder.getPrice(), trades, newOrder, matchingOrder,
+                    Math.min(newOrder.getQuantity(), matchingOrder.getQuantity()));
+            if (newOrder.getSide() == Side.BUY && !trades.getLast().buyerHasEnoughCredit()){
                 rollbackTradesBuy(newOrder, trades);
                 return MatchResult.notEnoughCredit(previous_last_traded_price);
             }
-            addNewTrade(matchingOrder.getPrice(), trades, newOrder, matchingOrder,
-                    Math.min(newOrder.getQuantity(), matchingOrder.getQuantity()));
             last_traded_price = matchingOrder.getPrice();
-            adjustCreditOfBuyOrderBroker(newOrder, trade);
-            adjustOrderQuantityRemoveSmallerOrder(orderBook, newOrder, matchingOrder);
+            decreaseBuyBrokerCredit(newOrder, trades.getLast());
+            decreaseOrderQuantity(newOrder, matchingOrder);
+            removeSmallerOrder(orderBook, newOrder, matchingOrder);
         }
         return MatchResult.executedContinuous(newOrder, trades, last_traded_price, hasActivatedOrder);
     }
@@ -78,22 +80,10 @@ public class ContinuousMatcher extends Matcher {
         }
         return result;
     }
-    private void adjustCreditOfBuyOrderBroker(Order order, Trade trade) {
-        if (order.getSide() == Side.BUY) {
-            trade.decreaseBuyersCredit();
-        }
-    }
-
-    protected void adjustOrderQuantityRemoveSmallerOrder(OrderBook orderBook, Order newOrder, Order matchingOrder) {
-        if (newOrder.getQuantity() >= matchingOrder.getQuantity()) {
-            newOrder.decreaseQuantity(matchingOrder.getQuantity());
+    @Override
+    protected void removeSmallerOrder(OrderBook orderBook, Order newOrder, Order matchingOrder) {
+        if (matchingOrder.getQuantity() == 0)
             removeZeroQuantityOrder(orderBook, matchingOrder);
-            replenishIcebergOrder(orderBook, matchingOrder);
-        } else {
-            matchingOrder.decreaseQuantity(newOrder.getQuantity());
-            newOrder.makeQuantityZero();
-        }
-
     }
 
     private void rollbackTradesBuy(Order newOrder, LinkedList<Trade> trades) {

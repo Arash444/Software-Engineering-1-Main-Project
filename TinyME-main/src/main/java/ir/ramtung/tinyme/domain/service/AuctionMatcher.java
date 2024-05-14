@@ -7,32 +7,43 @@ import java.util.LinkedList;
 
 @Service
 public class AuctionMatcher extends Matcher{
-    public MatchResult matchAllOrders(Security security) {
-        int openingPrice = security.getLatestMatchingPrice(), tradableQuantity = 0;
-        OrderBook orderBook = security.getOrderBook();
-        LinkedList<Trade> trades = new LinkedList<>();
-        int sellOrderCount = orderBook.getSellQueue().size();
+    @Override
+    public MatchResult match (Security security, Order order){
+        return this.match(security);
+    }
+    public MatchResult match(Security security) {
+        int openingPrice = security.getLatestMatchingPrice();
+        int tradableQuantity = 0;
         boolean isMatchingOver = false;
-        while(!isMatchingOver && sellOrderCount != 0) {
-            Order newOrder = orderBook.getSellQueue().getFirst();
-            while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0) {
-                Order matchingOrder = orderBook.matchWithFirstWithPrice(newOrder.getSide(), openingPrice);
-                if (matchingOrder == null) {
+        OrderBook orderBook = security.getOrderBook();
+        LinkedList<Order> sellQueueCopy = new LinkedList<>(orderBook.getSellQueue());
+        LinkedList<Trade> trades = new LinkedList<>();
+
+        while (!isAuctionOver(isMatchingOver, sellQueueCopy, orderBook)) {
+            Order sellOrder = sellQueueCopy.getFirst();
+            while (orderBook.hasOrderOfType(sellOrder.getSide().opposite()) && sellOrder.getQuantity() > 0) {
+                Order buyOrder = orderBook.matchWithFirstWithPrice(sellOrder.getSide(), openingPrice);
+                if (buyOrder == null) {
                     isMatchingOver = true;
                     break;
                 }
-
-                int tradeQuantity = Math.min(newOrder.getQuantity(), matchingOrder.getQuantity());
-                addNewTrade(openingPrice, trades, newOrder, matchingOrder, tradeQuantity);
+                int tradeQuantity = Math.min(sellOrder.getQuantity(), buyOrder.getQuantity());
+                addNewTrade(openingPrice, trades, sellOrder, buyOrder, tradeQuantity);
                 tradableQuantity += tradeQuantity;
 
-                adjustCreditOfBuyOrderBroker(matchingOrder, Math.abs(tradeQuantity * (openingPrice - newOrder.getPrice())));
-                adjustOrderQuantityRemoveSmallerOrder(orderBook, newOrder, matchingOrder);
+                increaseBuyBrokerCredit(buyOrder, Math.abs(tradeQuantity * (openingPrice - sellOrder.getPrice())));
+                decreaseOrderQuantity(sellOrder, buyOrder);
+                removeSmallerOrder(orderBook, sellOrder, buyOrder);
             }
-            sellOrderCount--;
+            sellQueueCopy.removeFirst();
         }
 
         return MatchResult.executedAuction(trades, openingPrice, tradableQuantity);
+    }
+
+    private boolean isAuctionOver(boolean isMatchingOver, LinkedList<Order> sellQueueCopy, OrderBook orderBook) {
+        return isMatchingOver || sellQueueCopy.isEmpty() ||
+                !orderBook.hasOrderOfType(Side.BUY) || !orderBook.hasOrderOfType(Side.SELL);
     }
 
     @Override
@@ -42,17 +53,12 @@ public class AuctionMatcher extends Matcher{
 
         OrderBook orderBook = order.getSecurity().getOrderBook();
 
-        adjustBrokerCredit(order);
+        decreaseBuyBrokerCredit(order);
         orderBook.enqueue(order);
         //ToDo what happens when there's no orders in the orderbook or when none of them match?
         int newOpeningPrice = calculateOpeningPrice(orderBook);
         int tradableQuantity = calculateTradableQuantity(newOpeningPrice, orderBook);
         return MatchResult.queuedInAuction(order, newOpeningPrice, tradableQuantity);
-    }
-
-    private static void adjustBrokerCredit(Order order) {
-        if (order.getSide() == Side.BUY)
-            order.getBroker().decreaseCreditBy(order.getValue());
     }
 
     private int calculateOpeningPrice(OrderBook orderBook) {
@@ -85,35 +91,15 @@ public class AuctionMatcher extends Matcher{
         return Math.min(totalBuyQuantity, totalSellQuantity);
     }
 
-    private void adjustCreditOfBuyOrderBroker(Order order, long creditChange) {
-        if (order.getSide() == Side.BUY)
-            order.getBroker().increaseCreditBy(creditChange);
-    }
-
+    //private boolean isMatchingOver(OrderBook orderBook) {
+    //    return !orderBook.hasOrderOfType(Side.BUY) || !orderBook.hasOrderOfType(Side.SELL);
+    //}
     @Override
-    protected void adjustOrderQuantityRemoveSmallerOrder(OrderBook orderBook, Order newOrder, Order matchingOrder) {
-        if (newOrder.getQuantity() > matchingOrder.getQuantity()) {
-            decreaseOrderQuantity(newOrder, matchingOrder, matchingOrder.getQuantity());
-            removeZeroQuantityOrder(orderBook, matchingOrder);
-            replenishIcebergOrder(orderBook, matchingOrder);
-        }
-        else if (newOrder.getQuantity() < matchingOrder.getQuantity()) {
-            decreaseOrderQuantity(matchingOrder, newOrder, newOrder.getQuantity());
-            removeZeroQuantityOrder(orderBook, newOrder);
-            replenishIcebergOrder(orderBook, newOrder);
-        }
-        else{
-            decreaseOrderQuantity(matchingOrder, newOrder, newOrder.getQuantity());
-            removeZeroQuantityOrder(orderBook, newOrder);
-            removeZeroQuantityOrder(orderBook, matchingOrder);
-            replenishIcebergOrder(orderBook, newOrder);
-            replenishIcebergOrder(orderBook, matchingOrder);
-        }
-    }
-
-    private void decreaseOrderQuantity(Order newOrder, Order matchingOrder, int quantity) {
-        newOrder.decreaseQuantity(quantity);
-        matchingOrder.decreaseQuantity(quantity);
+    protected void removeSmallerOrder(OrderBook orderBook, Order sellOrder, Order buyOrder) {
+        if (sellOrder.getQuantity() == 0)
+            removeZeroQuantityOrder(orderBook, sellOrder);
+        if (buyOrder.getQuantity() == 0)
+            removeZeroQuantityOrder(orderBook, buyOrder);
     }
 
 }

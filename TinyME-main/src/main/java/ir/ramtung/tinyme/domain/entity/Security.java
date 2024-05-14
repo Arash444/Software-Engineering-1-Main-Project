@@ -1,5 +1,6 @@
 package ir.ramtung.tinyme.domain.entity;
 
+import ir.ramtung.tinyme.domain.service.AuctionMatcher;
 import ir.ramtung.tinyme.messaging.exception.InvalidRequestException;
 import ir.ramtung.tinyme.messaging.request.DeleteOrderRq;
 import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
@@ -217,8 +218,7 @@ public class Security {
         }
 
     }
-
-    public MatchResult openAuction(Matcher matcher) {
-        return matcher.matchAllOrders(this);
+    public MatchResult openAuction(AuctionMatcher auctionMatcher) {
+        return auctionMatcher.match(this);
     }
 }
