@@ -33,20 +33,7 @@ public class AuctionMatcher extends Matcher{
             }
             sellQueueCopy.removeFirst();
         }
-
         return MatchResult.executedAuction(trades, openingPrice, tradableQuantity);
-    }
-    @Override
-    protected void matchTheTwoOrders(int openingPrice, OrderBook orderBook, LinkedList<Trade> trades, Order sellOrder, Order buyOrder, int tradeQuantity) {
-        addNewTrade(openingPrice, trades, sellOrder, buyOrder, tradeQuantity);
-        increaseBuyBrokerCredit(buyOrder, Math.abs(tradeQuantity * (openingPrice - sellOrder.getPrice())));
-        decreaseOrderQuantity(sellOrder, buyOrder);
-        removeSmallerOrder(orderBook, sellOrder, buyOrder);
-    }
-
-    private boolean isAuctionOver(boolean isMatchingOver, LinkedList<Order> sellQueueCopy, OrderBook orderBook) {
-        return isMatchingOver || sellQueueCopy.isEmpty() ||
-                !orderBook.hasOrderOfType(Side.BUY) || !orderBook.hasOrderOfType(Side.SELL);
     }
 
     @Override
@@ -93,10 +80,18 @@ public class AuctionMatcher extends Matcher{
 
         return Math.min(totalBuyQuantity, totalSellQuantity);
     }
+    @Override
+    protected void matchTheTwoOrders(int openingPrice, OrderBook orderBook, LinkedList<Trade> trades, Order sellOrder, Order buyOrder, int tradeQuantity) {
+        addNewTrade(openingPrice, trades, sellOrder, buyOrder, tradeQuantity);
+        increaseBuyBrokerCredit(buyOrder, Math.abs(tradeQuantity * (openingPrice - sellOrder.getPrice())));
+        decreaseOrderQuantity(sellOrder, buyOrder);
+        removeSmallerOrder(orderBook, sellOrder, buyOrder);
+    }
 
-    //private boolean isMatchingOver(OrderBook orderBook) {
-    //    return !orderBook.hasOrderOfType(Side.BUY) || !orderBook.hasOrderOfType(Side.SELL);
-    //}
+    private boolean isAuctionOver(boolean isMatchingOver, LinkedList<Order> sellQueueCopy, OrderBook orderBook) {
+        return isMatchingOver || sellQueueCopy.isEmpty() ||
+                !orderBook.hasOrderOfType(Side.BUY) || !orderBook.hasOrderOfType(Side.SELL);
+    }
     @Override
     protected void removeSmallerOrder(OrderBook orderBook, Order sellOrder, Order buyOrder) {
         if (sellOrder.getQuantity() == 0)

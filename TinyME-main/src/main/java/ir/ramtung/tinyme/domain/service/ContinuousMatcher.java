@@ -36,13 +36,6 @@ public class ContinuousMatcher extends Matcher {
         return MatchResult.executedContinuous(newOrder, trades, last_traded_price, hasActivatedOrder);
     }
     @Override
-    protected void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades,
-                                     Order matchingOrder, Order newOrder, int tradeQuantity) {
-        decreaseBuyBrokerCredit(newOrder, trades.getLast());
-        decreaseOrderQuantity(newOrder, matchingOrder);
-        removeSmallerOrder(orderBook, newOrder, matchingOrder);
-    }
-    @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
         int previous_last_traded_price = order.getSecurity().getLatestMatchingPrice();
         if (!order.canTrade()) {
@@ -85,6 +78,13 @@ public class ContinuousMatcher extends Matcher {
             }
         }
         return result;
+    }
+    @Override
+    protected void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades,
+                                     Order matchingOrder, Order newOrder, int tradeQuantity) {
+        decreaseBuyBrokerCredit(newOrder, trades.getLast());
+        decreaseOrderQuantity(newOrder, matchingOrder);
+        removeSmallerOrder(orderBook, newOrder, matchingOrder);
     }
     @Override
     protected void removeSmallerOrder(OrderBook orderBook, Order newOrder, Order matchingOrder) {
