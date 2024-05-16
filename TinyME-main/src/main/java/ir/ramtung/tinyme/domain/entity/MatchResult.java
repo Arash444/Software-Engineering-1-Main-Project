@@ -28,6 +28,10 @@ public final class MatchResult {
         return new MatchResult(MatchingOutcome.QUEUED_IN_AUCTION, remainder, new LinkedList<>(), lastTradedPrice,
                 false, tradableQuantity, openingPrice);
     }
+    public static MatchResult deletedFromAuction(int lastTradedPrice, int tradableQuantity, int openingPrice) {
+        return new MatchResult(MatchingOutcome.DELETED_FROM_AUCTION, null, new LinkedList<>(),
+                lastTradedPrice,false, tradableQuantity, openingPrice);
+    }
     public static MatchResult notEnoughCredit(int lastTradedPrice, int openingPrice) {
         return new MatchResult(MatchingOutcome.NOT_ENOUGH_CREDIT, null, new LinkedList<>(), lastTradedPrice,
                 false, 0, openingPrice);

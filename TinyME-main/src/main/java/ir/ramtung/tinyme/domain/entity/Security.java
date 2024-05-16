@@ -60,18 +60,14 @@ public class Security {
         return matchResult;
     }
 
-    public void deleteOrder(DeleteOrderRq deleteOrderRq) throws InvalidRequestException { //ToDo delete logic for auction is left
+    public void deleteOrder(DeleteOrderRq deleteOrderRq) {
         Order order = orderBook.findByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
+        StopLimitOrder stopLimitOrder = (StopLimitOrder) stopLimitOrderBook.findByOrderId
+                (deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
         if (order != null)
-            deleteNormalOrder(order, deleteOrderRq);
-        else {
-            StopLimitOrder stopLimitOrder = (StopLimitOrder) stopLimitOrderBook.findByOrderId(deleteOrderRq.getSide(),
-                    deleteOrderRq.getOrderId());
-            if (stopLimitOrder != null)
-                deleteStopLimitOrder(stopLimitOrder, deleteOrderRq);
-            else
-                throw new InvalidRequestException(Message.ORDER_ID_NOT_FOUND);
-        }
+            deleteNormalOrder(order);
+        else
+            deleteStopLimitOrder(stopLimitOrder);
     }
     public MatchResult activateOrder(StopLimitOrder originalOrder, StopLimitOrder order, Matcher matcher){
         preprocessStopLimitOrder(order, originalOrder);
@@ -191,17 +187,17 @@ public class Security {
         }
         return ordersToActivate;
     }
-    private void deleteNormalOrder(Order order, DeleteOrderRq deleteOrderRq)
+    private void deleteNormalOrder(Order order)
     {
         if (order.getSide() == Side.BUY)
             order.getBroker().increaseCreditBy(order.getValue());
-        orderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
+        orderBook.removeByOrderId(order.getSide(), order.getOrderId());
     }
-    private void deleteStopLimitOrder(StopLimitOrder stopLimitOrder, DeleteOrderRq deleteOrderRq)
+    private void deleteStopLimitOrder(StopLimitOrder stopLimitOrder)
     {
         if (stopLimitOrder.getSide() == Side.BUY)
             stopLimitOrder.getBroker().increaseCreditBy(stopLimitOrder.getValue());
-        stopLimitOrderBook.removeByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
+        stopLimitOrderBook.removeByOrderId(stopLimitOrder.getSide(), stopLimitOrder.getOrderId());
     }
 
     private void rollbackStopLimitOrder(StopLimitOrder originalOrder) {
@@ -222,5 +218,8 @@ public class Security {
         MatchResult matchResult = auctionMatcher.match(this);
         updateSecurityPrices(matchResult);
         return matchResult;
+    }
+    public MatchResult postDeleteAuctionProcess(AuctionMatcher auctionMatcher) {
+        return auctionMatcher.deletedOrderFromAuction(this);
     }
 }

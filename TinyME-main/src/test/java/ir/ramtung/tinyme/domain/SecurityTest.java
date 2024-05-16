@@ -101,15 +101,9 @@ class SecurityTest {
     @Test
     void delete_order_works() {
         DeleteOrderRq deleteOrderRq = new DeleteOrderRq(1, security.getIsin(), Side.SELL, 6);
-        assertThatNoException().isThrownBy(() -> security.deleteOrder(deleteOrderRq));
+        security.deleteOrder(deleteOrderRq);
         assertThat(security.getOrderBook().getBuyQueue()).isEqualTo(orders.subList(0, 5));
         assertThat(security.getOrderBook().getSellQueue()).isEqualTo(orders.subList(6, 10));
-    }
-
-    @Test
-    void deleting_non_existing_order_fails() {
-        DeleteOrderRq deleteOrderRq = new DeleteOrderRq(1, security.getIsin(), Side.SELL, 1);
-        assertThatExceptionOfType(InvalidRequestException.class).isThrownBy(() -> security.deleteOrder(deleteOrderRq));
     }
 
     @Test

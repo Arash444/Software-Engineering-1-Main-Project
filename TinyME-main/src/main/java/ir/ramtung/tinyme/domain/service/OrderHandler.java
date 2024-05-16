@@ -117,6 +117,12 @@ public class OrderHandler {
             Security security = securityRepository.findSecurityByIsin(deleteOrderRq.getSecurityIsin());
             security.deleteOrder(deleteOrderRq);
             eventPublisher.publish(new OrderDeletedEvent(deleteOrderRq.getRequestId(), deleteOrderRq.getOrderId()));
+            if(security.getMatchingState() == MatchingState.AUCTION) {
+                MatchResult matchResult = security.postDeleteAuctionProcess(auctionMatcher);
+                eventPublisher.publish(new OpeningPriceEvent(security.getIsin(), matchResult.getLastTradedPrice(),
+                        matchResult.getTradableQuantity()));
+            }
+
         } catch (InvalidRequestException ex) {
             eventPublisher.publish(new OrderRejectedEvent(deleteOrderRq.getRequestId(), deleteOrderRq.getOrderId(), ex.getReasons()));
         }
@@ -149,7 +155,7 @@ public class OrderHandler {
             if (enterOrderRq.getPrice() % security.getTickSize() != 0)
                 errors.add(Message.PRICE_NOT_MULTIPLE_OF_TICK_SIZE);
             if (security.getMatchingState() == MatchingState.AUCTION)
-                errors.addAll(auctionLimitationErrors(enterOrderRq));
+                errors.addAll(auctionEnterOrderErrors(enterOrderRq));
         }
         if (brokerRepository.findBrokerById(enterOrderRq.getBrokerId()) == null)
             errors.add(Message.UNKNOWN_BROKER_ID);
@@ -161,7 +167,7 @@ public class OrderHandler {
             throw new InvalidRequestException(errors);
     }
 
-    private List<String> auctionLimitationErrors(EnterOrderRq enterOrderRq) {
+    private List<String> auctionEnterOrderErrors(EnterOrderRq enterOrderRq) {
         List<String> errors = new LinkedList<>();
         if (enterOrderRq.getStopPrice() != 0)
             errors.add(Message.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS);
@@ -176,6 +182,16 @@ public class OrderHandler {
             errors.add(Message.INVALID_ORDER_ID);
         if (securityRepository.findSecurityByIsin(deleteOrderRq.getSecurityIsin()) == null)
             errors.add(Message.UNKNOWN_SECURITY_ISIN);
+        else {
+            Security security = securityRepository.findSecurityByIsin(deleteOrderRq.getSecurityIsin());
+            Order deleteOrder = security.getOrderBook().findByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
+            StopLimitOrder stopLimitDeleteOrder = (StopLimitOrder) security.getStopLimitOrderBook().findByOrderId(deleteOrderRq.getSide(),
+                    deleteOrderRq.getOrderId());
+            if (deleteOrder == null && stopLimitDeleteOrder == null)
+                errors.add(Message.ORDER_ID_NOT_FOUND);
+            if (security.getMatchingState() == MatchingState.AUCTION && stopLimitDeleteOrder != null)
+                errors.add(Message.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS);
+        }
         if (!errors.isEmpty())
             throw new InvalidRequestException(errors);
     }

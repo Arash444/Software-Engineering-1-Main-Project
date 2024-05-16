@@ -13,29 +13,27 @@ public class AuctionMatcher extends Matcher{
         return this.match(security);
     }
     public MatchResult match(Security security) {
-        int openingPrice = security.getOpeningPrice();
         int tradableQuantity = 0;
         boolean isMatchingOver = false;
-        OrderBook orderBook = security.getOrderBook();
-        LinkedList<Order> sellQueueCopy = new LinkedList<>(orderBook.getSellQueue());
+        LinkedList<Order> sellQueueCopy = new LinkedList<>(security.getOrderBook().getSellQueue());
         LinkedList<Trade> trades = new LinkedList<>();
 
-        while (!isAuctionOver(isMatchingOver, sellQueueCopy, orderBook)) {
+        while (!isAuctionOver(isMatchingOver, sellQueueCopy, security.getOrderBook())) {
             Order sellOrder = sellQueueCopy.getFirst();
-            while (orderBook.hasOrderOfType(sellOrder.getSide().opposite()) && sellOrder.getQuantity() > 0) {
-                Order buyOrder = orderBook.matchWithFirst(sellOrder.getSide(), openingPrice);
+            while (security.getOrderBook().hasOrderOfType(sellOrder.getSide().opposite()) && sellOrder.getQuantity() > 0) {
+                Order buyOrder = security.getOrderBook().matchWithFirst(sellOrder.getSide(), security.getOpeningPrice());
                 if (buyOrder == null) {
                     isMatchingOver = true;
                     break;
                 }
                 int tradeQuantity = Math.min(sellOrder.getQuantity(), buyOrder.getQuantity());
                 tradableQuantity += tradeQuantity;
-                matchTheTwoOrders(openingPrice, orderBook, trades, sellOrder, buyOrder, tradeQuantity);
+                matchTheTwoOrders(security.getOpeningPrice(), security.getOrderBook(), trades, sellOrder, buyOrder, tradeQuantity);
             }
             sellQueueCopy.removeFirst();
         }
         return MatchResult.executedAuction(trades, getLastTradedPriceAfterMatch(security),
-                tradableQuantity, openingPrice);
+                tradableQuantity, security.getOpeningPrice());
     }
 
     private int getLastTradedPriceAfterMatch(Security security) {
@@ -50,43 +48,12 @@ public class AuctionMatcher extends Matcher{
         if (brokerDoesNotHaveEnoughCredit(order))
             return MatchResult.notEnoughCredit(order.getSecurity().getLastTradedPrice(), order.getSecurity().getOpeningPrice());
 
-        OrderBook orderBook = order.getSecurity().getOrderBook();
-
         decreaseBuyBrokerCredit(order);
-        orderBook.enqueue(order);
-        int newOpeningPrice = calculateOpeningPrice(orderBook);
-        int tradableQuantity = calculateTradableQuantity(newOpeningPrice, orderBook);
-        return MatchResult.queuedInAuction(order, order.getSecurity().getLastTradedPrice(), tradableQuantity, newOpeningPrice);
-    }
-
-    private int calculateOpeningPrice(OrderBook orderBook) {
-        int maxTradebleQuantity = 0, newOpeningPrice = -1;
-        int lowestPrice = orderBook.getLowestPriorityOrderPrice(Side.BUY);
-        int highestPrice = orderBook.getLowestPriorityOrderPrice(Side.SELL);
-
-        for (int openingPrice = lowestPrice; openingPrice <= highestPrice; openingPrice++){
-            int tradebleQuantity = calculateTradableQuantity(openingPrice, orderBook);
-            if(tradebleQuantity > maxTradebleQuantity) {
-                maxTradebleQuantity = tradebleQuantity;
-                newOpeningPrice = openingPrice;
-            }
-        }
-
-        return newOpeningPrice;
-    }
-
-    private int calculateTradableQuantity(int newOpeningPrice, OrderBook orderBook) {
-        LinkedList<Order> matchingBuyOrders = orderBook.findAllMatchingOrdersWithPrice(newOpeningPrice, Side.BUY);
-        LinkedList<Order> matchingSellOrders = orderBook.findAllMatchingOrdersWithPrice(newOpeningPrice, Side.SELL);
-
-        int totalBuyQuantity = matchingBuyOrders.stream()
-                .mapToInt(Order::getQuantity)
-                .sum();
-        int totalSellQuantity = matchingSellOrders.stream()
-                .mapToInt(Order::getQuantity)
-                .sum();
-
-        return Math.min(totalBuyQuantity, totalSellQuantity);
+        order.getSecurity().getOrderBook().enqueue(order);
+        int newOpeningPrice = calculateOpeningPrice(order.getSecurity().getOrderBook());
+        return MatchResult.queuedInAuction(order, order.getSecurity().getLastTradedPrice(),
+                calculateTradableQuantity(order.getSecurity().getOrderBook(),newOpeningPrice),
+                newOpeningPrice);
     }
     @Override
     protected void matchTheTwoOrders(int openingPrice, OrderBook orderBook, LinkedList<Trade> trades, Order sellOrder, Order buyOrder, int tradeQuantity) {
@@ -109,4 +76,37 @@ public class AuctionMatcher extends Matcher{
             removeZeroQuantityOrder(orderBook, buyOrder);
     }
 
+    public int calculateOpeningPrice(OrderBook orderBook) {
+        int maxTradebleQuantity = 0, newOpeningPrice = -1;
+        int lowestPrice = orderBook.getLowestPriorityOrderPrice(Side.BUY);
+        int highestPrice = orderBook.getLowestPriorityOrderPrice(Side.SELL);
+
+        for (int openingPrice = lowestPrice; openingPrice <= highestPrice; openingPrice++){
+            int tradebleQuantity = calculateTradableQuantity(orderBook, openingPrice);
+            if(tradebleQuantity > maxTradebleQuantity) {
+                maxTradebleQuantity = tradebleQuantity;
+                newOpeningPrice = openingPrice;
+            }
+        }
+        return newOpeningPrice;
+    }
+    private int calculateTradableQuantity(OrderBook orderBook, int newOpeningPrice) {
+        LinkedList<Order> matchingBuyOrders = orderBook.findAllMatchingOrdersWithPrice(newOpeningPrice, Side.BUY);
+        LinkedList<Order> matchingSellOrders = orderBook.findAllMatchingOrdersWithPrice(newOpeningPrice, Side.SELL);
+
+        int totalBuyQuantity = matchingBuyOrders.stream()
+                .mapToInt(Order::getQuantity)
+                .sum();
+        int totalSellQuantity = matchingSellOrders.stream()
+                .mapToInt(Order::getQuantity)
+                .sum();
+
+        return Math.min(totalBuyQuantity, totalSellQuantity);
+    }
+
+    public MatchResult deletedOrderFromAuction(Security security) {
+        int newOpeningPrice = calculateOpeningPrice(security.getOrderBook());
+        return MatchResult.deletedFromAuction(security.getLastTradedPrice(), newOpeningPrice,
+                calculateTradableQuantity(security.getOrderBook(), newOpeningPrice));
+    }
 }
