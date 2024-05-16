@@ -242,8 +242,8 @@ public class ContinuousMatcherTest {
     @Test
     void new_sell_order_buy_activated_stop_limit_order_should_trade() {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(11, security, Side.BUY, 100, 15750,
-                broker, shareholder, 100,0);
-        Order order = new Order(12, security, Side.SELL, 500, 15500, broker, shareholder, 0);
+                broker, shareholder,mockedNow, 100,0);
+        Order order = new Order(12, security, Side.SELL, 500, 15500, broker, shareholder,mockedNow, 0);
         Trade trade1 = new Trade(security, 15750, 100, stopLimitOrder.convertToOrder(), order);
         continuousMatcher.execute(stopLimitOrder, false);
         Trade trade2 = new Trade(security, 15700, 304, orders.get(0), order.snapshotWithQuantity(400));
