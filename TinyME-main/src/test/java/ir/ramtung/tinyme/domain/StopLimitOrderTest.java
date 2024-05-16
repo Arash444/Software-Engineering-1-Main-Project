@@ -77,7 +77,7 @@ public class StopLimitOrderTest {
     @Test
     void new_order_triggers_buy_stop_limit_order_and_trades_partially_validate_events() {
         StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
-                buy_broker, shareholder, 15700);
+                buy_broker, shareholder, 15700,0 );
         Order matchingSellOrder = new Order(2, security, Side.SELL, 350, 15800, sell_broker,
                 shareholder, 0);
         Order matchingBuyOrder= new Order(3, security, BUY, 304, 15700, buy_broker, shareholder,
@@ -109,7 +109,7 @@ public class StopLimitOrderTest {
     @Test
     void new_order_triggers_buy_stop_limit_order_matches_with_sell_partially_check_credit() {
         StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
-                buy_broker, shareholder, 15700);
+                buy_broker, shareholder, 15700, 0);
         Order matchingSellOrder = new Order(2, security, Side.SELL, 350, 15800, sell_broker,
                 shareholder, 0);
         Order matchingBuyOrder= new Order(3, security, BUY, 304, 15700, buy_broker, shareholder,
@@ -135,7 +135,7 @@ public class StopLimitOrderTest {
         Order sellOrder = new Order(3, security, SELL, 300, 15300,
                 sell_broker, shareholder, 0);
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, SELL, 300, 15000,
-                sell_broker, shareholder, 15400);
+                sell_broker, shareholder, 15400, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
         security.getOrderBook().enqueue(buyOrder);
         security.getOrderBook().enqueue(sellOrder);
@@ -166,7 +166,7 @@ public class StopLimitOrderTest {
         Order sellOrder = new Order(3, security, SELL, 300, 15300,
                 sell_broker, shareholder, 0);
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, SELL, 300, 15000,
-                sell_broker, shareholder, 15400);
+                sell_broker, shareholder, 15400, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
         security.getOrderBook().enqueue(buyOrder);
         security.getOrderBook().enqueue(sellOrder);
@@ -184,7 +184,7 @@ public class StopLimitOrderTest {
     @Test
     void stop_limit_order_activates_when_price_reaches_stop_for_buy_order() {
         StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
-                buy_broker, shareholder, 1000);
+                buy_broker, shareholder, 1000, 0);
         Order matchingSellOrder = new Order(2, security, Side.SELL, 350, 15800, sell_broker,
                 shareholder, 0);
         Order matchingBuyOrder= new Order(3, security, BUY, 304, 15700, buy_broker, shareholder,
@@ -206,7 +206,7 @@ public class StopLimitOrderTest {
     @Test
     void stop_limit_order_does_not_activate_when_price_below_stop_for_sell_order() {
         StopLimitOrder matchingStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
-                buy_broker, shareholder, 551554264);
+                buy_broker, shareholder, 551554264, 0);
         Order matchingSellOrder = new Order(2, security, Side.SELL, 350, 15800, sell_broker,
                 shareholder, 0);
         Order matchingBuyOrder= new Order(3, security, BUY, 304, 15700, buy_broker, shareholder,
@@ -226,10 +226,10 @@ public class StopLimitOrderTest {
     @Test
     void new_order_triggers_stop_limit_order_which_triggers_another_stop_limit_order_check_events() {
         StopLimitOrder firstStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
-                buy_broker, shareholder, 15500);
+                buy_broker, shareholder, 15500, 0 );
 
         StopLimitOrder secondStopLimitOrder = new StopLimitOrder(2, security, BUY, 400, 15900,
-                buy_broker, shareholder, 15900);
+                buy_broker, shareholder, 15900, 0);
 
         Order firstMatchingSellOrder = new Order(3, security, Side.SELL, 10, 15800, sell_broker,
                 shareholder, 0);
@@ -254,10 +254,10 @@ public class StopLimitOrderTest {
     @Test
     void new_order_triggers_stop_limit_order_which_triggers_another_stop_limit_order_check_credit() {
         StopLimitOrder firstStopLimitOrder = new StopLimitOrder(1, security, BUY, 400, 15900,
-                buy_broker, shareholder, 15500);
+                buy_broker, shareholder, 15500, 0);
 
         StopLimitOrder secondStopLimitOrder = new StopLimitOrder(2, security, BUY, 400, 15900,
-                buy_broker, shareholder, 15900);
+                buy_broker, shareholder, 15900, 0);
 
         Order firstMatchingSellOrder = new Order(3, security, Side.SELL, 5, 15800, sell_broker,
                 shareholder, 0);
@@ -317,7 +317,7 @@ public class StopLimitOrderTest {
                 sell_broker.getBrokerId(), shareholder.getShareholderId(), 0,
                 0, 15000));
         Order stopLimitSellOrder = new StopLimitOrder(2, security, SELL, 1000, 15850, sell_broker,
-                shareholder, 15000);
+                shareholder, 15000,0);
         Trade trade1 = new Trade(security, 15850, 500,
                 stopLimitSellOrder, matchingBuyOrder);
 
@@ -410,7 +410,7 @@ public class StopLimitOrderTest {
     update_buy_stop_limit_order_change_stop_price_activates_with_trade_check_events()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 400, 15500,
-                buy_broker, shareholder, 50000);
+                buy_broker, shareholder, 50000, 0);
         Order matchedSellOrder = new Order(2, security, Side.SELL, 500, 15450,
                 sell_broker, shareholder, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
@@ -434,7 +434,7 @@ public class StopLimitOrderTest {
     update_buy_stop_limit_order_change_stop_price_activates_with_trade_check_credit()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 400, 15500,
-                buy_broker, shareholder, 50000);
+                buy_broker, shareholder, 50000, 0);
         Order matchedSellOrder = new Order(2, security, Side.SELL, 200, 15450,
                 sell_broker, shareholder, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
@@ -454,7 +454,7 @@ public class StopLimitOrderTest {
     update_buy_stop_limit_order_change_stop_price_activates_with_trade_almost_0_broker_credit_check_credit()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 400, 15500,
-                buy_broker, shareholder, 50000);
+                buy_broker, shareholder, 50000, 0);
         Order matchedSellOrder = new Order(2, security, Side.SELL, 500, 5450,
                 sell_broker, shareholder, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
@@ -474,7 +474,7 @@ public class StopLimitOrderTest {
     update_buy_stop_limit_order_change_stop_price_activates_no_trade()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
-                buy_broker, shareholder, 50000);
+                buy_broker, shareholder, 50000, 0);
         Order sellOrder = new Order(2, security, Side.SELL, 500, 15550,
                 sell_broker, shareholder, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
@@ -495,7 +495,7 @@ public class StopLimitOrderTest {
     update_buy_stop_limit_order_change_stop_price_activates_no_trade_check_orderbook()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
-                buy_broker, shareholder, 50000);
+                buy_broker, shareholder, 50000, 0);
         Order sellOrder = new Order(2, security, Side.SELL, 500, 15550,
                 sell_broker, shareholder, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
@@ -526,7 +526,7 @@ public class StopLimitOrderTest {
     update_buy_stop_limit_order_change_stop_price_does_not_activate()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
-                buy_broker, shareholder, 50000);
+                buy_broker, shareholder, 50000, 0);
         Order matchedSellOrder = new Order(2, security, Side.SELL, 200, 15450,
                 sell_broker, shareholder, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
@@ -546,7 +546,7 @@ public class StopLimitOrderTest {
     update_buy_stop_limit_order_change_quantity_and_price_does_not_activate()
     {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
-                buy_broker, shareholder, 50000);
+                buy_broker, shareholder, 50000, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
 
         orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, security.getIsin(), 1,
@@ -563,7 +563,7 @@ public class StopLimitOrderTest {
     @Test
     void delete_stop_limit_buy_order_deletes_successfully_and_increases_credit() {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
-                buy_broker, shareholder, 50000);
+                buy_broker, shareholder, 50000, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
 
         orderHandler.handleDeleteOrder(new DeleteOrderRq(1, security.getIsin(), Side.BUY, 1));
@@ -577,7 +577,7 @@ public class StopLimitOrderTest {
     @Test
     void delete_stop_limit_sell_order_deletes_successfully() {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.SELL, 300, 15500,
-                sell_broker, shareholder, 50000);
+                sell_broker, shareholder, 50000, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
 
         orderHandler.handleDeleteOrder(new DeleteOrderRq(1, security.getIsin(), Side.SELL, 1));
@@ -590,7 +590,7 @@ public class StopLimitOrderTest {
     @Test
     void invalid_stop_limit_delete_with_order_id_not_found() {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(1, security, Side.BUY, 300, 15500,
-                buy_broker, shareholder, 50000);
+                buy_broker, shareholder, 50000, 0);
         security.getStopLimitOrderBook().enqueue(stopLimitOrder);
 
         orderHandler.handleDeleteOrder(new DeleteOrderRq(1, security.getIsin(), Side.BUY, 2));
@@ -606,12 +606,12 @@ public class StopLimitOrderTest {
         Order order1 = new Order(1, security, BUY, 10, 15900, buy_broker, shareholder, 0);
         Order order2 = new Order(2, security, BUY, 50, 15750, buy_broker, shareholder, 0);
         Order order3 = new Order(3, security, BUY, 50, 15700, buy_broker, shareholder, 0);
-        StopLimitOrder order4 = new StopLimitOrder(4, security, SELL, 50, 14750, sell_broker, shareholder, 15800);
-        StopLimitOrder order5 = new StopLimitOrder(5, security, SELL, 50, 14810, sell_broker, shareholder, 15900);
-        StopLimitOrder order6 = new StopLimitOrder(6, security, SELL, 50, 14850, sell_broker, shareholder, 15740);
-        StopLimitOrder order7 = new StopLimitOrder(7, security, SELL, 50, 14900, sell_broker, shareholder, 15970);
-        StopLimitOrder order8 = new StopLimitOrder(8, security, SELL, 50, 15000, sell_broker, shareholder, 15700);
-        StopLimitOrder order9 = new StopLimitOrder(9, security, SELL, 50, 15500, sell_broker, shareholder, 15850);
+        StopLimitOrder order4 = new StopLimitOrder(4, security, SELL, 50, 14750, sell_broker, shareholder, 15800, 0);
+        StopLimitOrder order5 = new StopLimitOrder(5, security, SELL, 50, 14810, sell_broker, shareholder, 15900, 0);
+        StopLimitOrder order6 = new StopLimitOrder(6, security, SELL, 50, 14850, sell_broker, shareholder, 15740, 0);
+        StopLimitOrder order7 = new StopLimitOrder(7, security, SELL, 50, 14900, sell_broker, shareholder, 15970, 0);
+        StopLimitOrder order8 = new StopLimitOrder(8, security, SELL, 50, 15000, sell_broker, shareholder, 15700, 0);
+        StopLimitOrder order9 = new StopLimitOrder(9, security, SELL, 50, 15500, sell_broker, shareholder, 15850, 0);
 
         security.getStopLimitOrderBook().enqueue(order4);
         security.getStopLimitOrderBook().enqueue(order5);
@@ -653,12 +653,12 @@ public class StopLimitOrderTest {
 
     @Test
     void new_order_triggers_two_buy_orders_each_trigger_two_check_order_of_events() {
-        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820);
-        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950);
-        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810);
-        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970);
-        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940);
-        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980);
+        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820,0);
+        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950,0);
+        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810,0);
+        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970,0);
+        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940,0);
+        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980,0);
         Order order7 = new Order(7, security, Side.SELL, 10, 15820, sell_broker, shareholder, 0);
         Order order8 = new Order(8, security, Side.SELL, 50, 15950, sell_broker, shareholder, 0);
         Order order9 = new Order(9, security, Side.SELL, 50, 16000, sell_broker, shareholder, 0);
@@ -706,12 +706,12 @@ public class StopLimitOrderTest {
         Order order1 = new Order(1, security, BUY, 10, 15900, buy_broker, shareholder, 0);
         Order order2 = new Order(2, security, BUY, 50, 15750, buy_broker, shareholder, 0);
         Order order3 = new Order(3, security, BUY, 50, 15700, buy_broker, shareholder, 0);
-        StopLimitOrder order4 = new StopLimitOrder(4, security, SELL, 50, 14750, sell_broker, shareholder, 15800);
-        StopLimitOrder order5 = new StopLimitOrder(5, security, SELL, 50, 14810, sell_broker, shareholder, 15900);
-        StopLimitOrder order6 = new StopLimitOrder(6, security, SELL, 50, 14850, sell_broker, shareholder, 15740);
-        StopLimitOrder order7 = new StopLimitOrder(7, security, SELL, 50, 14900, sell_broker, shareholder, 15970);
-        StopLimitOrder order8 = new StopLimitOrder(8, security, SELL, 50, 15000, sell_broker, shareholder, 15700);
-        StopLimitOrder order9 = new StopLimitOrder(9, security, SELL, 50, 15500, sell_broker, shareholder, 15850);
+        StopLimitOrder order4 = new StopLimitOrder(4, security, SELL, 50, 14750, sell_broker, shareholder, 15800, 0);
+        StopLimitOrder order5 = new StopLimitOrder(5, security, SELL, 50, 14810, sell_broker, shareholder, 15900, 0);
+        StopLimitOrder order6 = new StopLimitOrder(6, security, SELL, 50, 14850, sell_broker, shareholder, 15740, 0);
+        StopLimitOrder order7 = new StopLimitOrder(7, security, SELL, 50, 14900, sell_broker, shareholder, 15970, 0);
+        StopLimitOrder order8 = new StopLimitOrder(8, security, SELL, 50, 15000, sell_broker, shareholder, 15700, 0);
+        StopLimitOrder order9 = new StopLimitOrder(9, security, SELL, 50, 15500, sell_broker, shareholder, 15850, 0);
         Order order10 = new Order(10, security, SELL, 10, 16850, sell_broker, shareholder, 0);
         security.getOrderBook().enqueue(order1);
         security.getOrderBook().enqueue(order2);
@@ -752,12 +752,12 @@ public class StopLimitOrderTest {
 
     @Test
     void update_order_triggers_two_buy_orders_each_trigger_two_check_order_of_events() {
-        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820);
-        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950);
-        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810);
-        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970);
-        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940);
-        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980);
+        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820,0);
+        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950, 0);
+        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810, 0);
+        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970, 0);
+        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940, 0);
+        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980, 0);
         Order order7 = new Order(7, security, Side.SELL, 10, 15820, sell_broker, shareholder, 0);
         Order order8 = new Order(8, security, Side.SELL, 50, 15950, sell_broker, shareholder, 0);
         Order order9 = new Order(9, security, Side.SELL, 50, 16000, sell_broker, shareholder, 0);
@@ -803,12 +803,12 @@ public class StopLimitOrderTest {
 
     @Test
     void new_order_triggers_two_buy_orders_each_trigger_two_check_orderbook() {
-        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820);
-        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950);
-        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810);
-        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970);
-        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940);
-        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980);
+        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820, 0);
+        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950, 0);
+        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810, 0);
+        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970, 0);
+        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940, 0);
+        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980, 0);
         Order order7 = new Order(7, security, Side.SELL, 10, 15820, sell_broker, shareholder, 0);
         Order order8 = new Order(8, security, Side.SELL, 50, 15950, sell_broker, shareholder, 0);
         Order order9 = new Order(9, security, Side.SELL, 50, 16000, sell_broker, shareholder, 0);
@@ -841,12 +841,12 @@ public class StopLimitOrderTest {
     }
     @Test
     void update_order_triggers_two_buy_orders_each_trigger_two_check_orderbook() {
-        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820);
-        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950);
-        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810);
-        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970);
-        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940);
-        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980);
+        StopLimitOrder order1 = new StopLimitOrder(1, security, BUY, 50, 16100, buy_broker, shareholder, 15820, 0);
+        StopLimitOrder order2 = new StopLimitOrder(2, security, BUY, 50, 15970, buy_broker, shareholder, 15950, 0);
+        StopLimitOrder order3 = new StopLimitOrder(3, security, BUY, 50, 15960, buy_broker, shareholder, 15810,0);
+        StopLimitOrder order4 = new StopLimitOrder(4, security, BUY, 50, 14950, buy_broker, shareholder, 15970,0);
+        StopLimitOrder order5 = new StopLimitOrder(5, security, BUY, 50, 14810, buy_broker, shareholder, 15940,0);
+        StopLimitOrder order6 = new StopLimitOrder(6, security, BUY, 50, 14800, buy_broker, shareholder, 15980,0);
         Order order7 = new Order(7, security, Side.SELL, 10, 15820, sell_broker, shareholder, 0);
         Order order8 = new Order(8, security, Side.SELL, 50, 15950, sell_broker, shareholder, 0);
         Order order9 = new Order(9, security, Side.SELL, 50, 16000, sell_broker, shareholder, 0);

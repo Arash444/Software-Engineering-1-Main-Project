@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,6 +31,7 @@ public class ContinuousMatcherTest {
     private List<Order> orders;
     @Autowired
     private ContinuousMatcher continuousMatcher;
+    private LocalDateTime mockedNow;
 
     @BeforeEach
     void setupOrderBook() {
@@ -39,17 +41,18 @@ public class ContinuousMatcherTest {
         shareholder.incPosition(security, 100_000);
         orderBook = security.getOrderBook();
         stopLimitOrderBook = security.getStopLimitOrderBook();
+        mockedNow = LocalDateTime.of(2024, 4, 27, 16, 30);
         orders = Arrays.asList(
-                new Order(1, security, BUY, 304, 15700, broker, shareholder, 0),
-                new Order(2, security, BUY, 43, 15500, broker, shareholder, 0),
-                new Order(3, security, BUY, 445, 15450, broker, shareholder, 0),
-                new Order(4, security, BUY, 526, 15450, broker, shareholder, 0),
-                new Order(5, security, BUY, 1000, 15400, broker, shareholder, 0),
-                new Order(6, security, Side.SELL, 350, 15800, broker, shareholder, 0),
-                new Order(7, security, Side.SELL, 285, 15810, broker, shareholder, 0),
-                new Order(8, security, Side.SELL, 800, 15810, broker, shareholder, 0),
-                new Order(9, security, Side.SELL, 340, 15820, broker, shareholder, 0),
-                new Order(10, security, Side.SELL, 65, 15820, broker, shareholder, 0)
+                new Order(1, security, BUY, 304, 15700, broker, shareholder,mockedNow, 0),
+                new Order(2, security, BUY, 43, 15500, broker, shareholder,mockedNow,0),
+                new Order(3, security, BUY, 445, 15450, broker, shareholder,mockedNow, 0),
+                new Order(4, security, BUY, 526, 15450, broker, shareholder,mockedNow, 0),
+                new Order(5, security, BUY, 1000, 15400, broker, shareholder, mockedNow,0),
+                new Order(6, security, Side.SELL, 350, 15800, broker, shareholder,mockedNow, 0),
+                new Order(7, security, Side.SELL, 285, 15810, broker, shareholder,mockedNow, 0),
+                new Order(8, security, Side.SELL, 800, 15810, broker, shareholder, mockedNow,0),
+                new Order(9, security, Side.SELL, 340, 15820, broker, shareholder,mockedNow, 0),
+                new Order(10, security, Side.SELL, 65, 15820, broker, shareholder,mockedNow, 0)
         );
         orders.forEach(order -> orderBook.enqueue(order));
     }
@@ -202,7 +205,7 @@ public class ContinuousMatcherTest {
     @Test
     void new_stop_limit_order_has_not_been_activated() {
         StopLimitOrder order = new StopLimitOrder(11, security, Side.SELL, 2000, 15500,
-                broker, shareholder, 100);
+                broker, shareholder, 100,0);
         MatchResult result = continuousMatcher.execute(order, false);
         assertThat(result.remainder()).isEqualTo(order);
         assertThat(result.trades()).isEmpty();
@@ -210,7 +213,7 @@ public class ContinuousMatcherTest {
     @Test
     void new_stop_limit_order_has_been_activated() {
         StopLimitOrder order = new StopLimitOrder(11, security, Side.SELL, 500, 15500,
-                broker, shareholder,55100);
+                broker, shareholder,mockedNow, 55100,0);
         Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order.convertToOrder());
         Trade trade2 = new Trade(security, 15500, 43, orders.get(1),
                 order.convertToOrder().snapshotWithQuantity(196));
@@ -222,9 +225,9 @@ public class ContinuousMatcherTest {
     @Test
     void new_sell_order_buy_stop_limit_order_should_not_trade_but_others_should() {
         StopLimitOrder stopLimitOrder1 = new StopLimitOrder(11, security, Side.BUY, 2000, 15750,
-                broker, shareholder, 51000);
+                broker, shareholder, 51000,0);
         StopLimitOrder stopLimitOrder2 = new StopLimitOrder(12, security, Side.BUY, 2000, 15750,
-                broker, shareholder, 51000);
+                broker, shareholder, 51000,0);
         stopLimitOrderBook.enqueue(stopLimitOrder1);
         stopLimitOrderBook.enqueue(stopLimitOrder2);
 
@@ -239,7 +242,7 @@ public class ContinuousMatcherTest {
     @Test
     void new_sell_order_buy_activated_stop_limit_order_should_trade() {
         StopLimitOrder stopLimitOrder = new StopLimitOrder(11, security, Side.BUY, 100, 15750,
-                broker, shareholder, 100);
+                broker, shareholder, 100,0);
         Order order = new Order(12, security, Side.SELL, 500, 15500, broker, shareholder, 0);
         Trade trade1 = new Trade(security, 15750, 100, stopLimitOrder.convertToOrder(), order);
         continuousMatcher.execute(stopLimitOrder, false);
@@ -278,7 +281,7 @@ public class ContinuousMatcherTest {
 
     @Test
     void new_buy_order_matches_partially_with_the_entire_sell_queue_except_stop_limit_order() {
-        StopLimitOrder stopLimitOrder = new StopLimitOrder(12, security, SELL, 2000, 15810, broker, shareholder, 100);
+        StopLimitOrder stopLimitOrder = new StopLimitOrder(12, security, SELL, 2000, 15810, broker, shareholder, 100,0);
         stopLimitOrderBook.enqueue(stopLimitOrder);
 
         Order order = new Order(11, security, BUY, 2000, 15820, broker, shareholder, 0);
