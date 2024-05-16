@@ -5,6 +5,7 @@ import ir.ramtung.tinyme.domain.entity.*;
 import ir.ramtung.tinyme.domain.service.AuctionMatcher;
 import ir.ramtung.tinyme.messaging.request.MatchingState;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -148,19 +149,19 @@ public class AuctionMatcherTest {
                 new Order(1, security, BUY, 200, 15700, broker, shareholder, 0),
                 new Order(2, security, BUY, 100, 15600, broker, shareholder, 0),
                 new Order(3, security, BUY, 50, 15500, broker, shareholder, 0),
-                new Order(4, security, BUY, 50, 15400, broker, shareholder, 0),
+                new Order(4, security, BUY, 60, 15400, broker, shareholder, 0),
                 new Order(5, security, Side.SELL, 300, 15600, broker, shareholder, 0)
         );
         orders.forEach(order -> orderBook.enqueue(order));
         Trade trade1 = new Trade(security, 15600, 200, orders.get(0), orders.get(4));
-        Trade trade2 = new Trade(security, 15600, 100, orders.get(1), orders.get(4));
+        Trade trade2 = new Trade(security, 15600, 100, orders.get(1), orders.get(4).snapshotWithQuantity(100));
         security.setOpeningPrice(15600);
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade1, trade2);
         assertThat(result.getTradableQuantity()).isEqualTo(300);
         assertThat(result.getLastTradedPrice()).isEqualTo(15600);
         assertThat(result.getOpeningPrice()).isEqualTo(15600);
-        assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isTrue();
+        assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(50);
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
     }
 
@@ -175,31 +176,34 @@ public class AuctionMatcherTest {
         assertThat(result.getTradableQuantity()).isEqualTo(0);
         assertThat(result.getLastTradedPrice()).isEqualTo(15000);
         assertThat(result.getOpeningPrice()).isEqualTo(-1);
-        assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isTrue();
+        assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isFalse();
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
     }
 
     @Test
     void open_auction_mixed_buy_sell_queue() {
         orders = List.of(
-                new Order(1, security, BUY, 300, 15700, broker, shareholder, 0),
-                new Order(2, security, Side.SELL, 200, 15600, broker, shareholder, 0),
-                new Order(3, security, Side.SELL, 100, 15500, broker, shareholder, 0),
-                new Order(4, security, BUY, 100, 15400, broker, shareholder, 0),
-                new Order(5, security, BUY, 50, 15300, broker, shareholder, 0),
-                new Order(6, security, Side.SELL, 150, 15200, broker, shareholder, 0)
+                new Order(1, security, BUY, 200, 15700, broker, shareholder, 0),
+                new Order(2, security, BUY, 100, 15650, broker, shareholder, 0),
+                new Order(3, security, BUY, 50, 15300, broker, shareholder, 0),
+                new Order(4, security, Side.SELL, 150, 15200, broker, shareholder, 0),
+                new Order(5, security, Side.SELL, 200, 15500, broker, shareholder, 0),
+                new Order(6, security, Side.SELL, 100, 15600, broker, shareholder, 0)
         );
         orders.forEach(order -> orderBook.enqueue(order));
-        Trade trade1 = new Trade(security, 15600, 200, orders.get(0), orders.get(1));
-        Trade trade2 = new Trade(security, 15600, 100, orders.get(0), orders.get(2));
-        security.setOpeningPrice(15600);
+        Trade trade1 = new Trade(security, 15600, 150, orders.get(0), orders.get(3));
+        Trade trade2 = new Trade(security, 15600, 50,
+                orders.get(0).snapshotWithQuantity(50), orders.get(4));
+        Trade trade3 = new Trade(security, 15600, 100,
+                orders.get(1), orders.get(4).snapshotWithQuantity(150));
+        security.setOpeningPrice(15600); //ToDo check if it works
         MatchResult result = auctionMatcher.match(security);
-        assertThat(result.trades()).containsExactly(trade1, trade2);
+        assertThat(result.trades()).containsExactly(trade1, trade2, trade3);
         assertThat(result.getTradableQuantity()).isEqualTo(300);
         assertThat(result.getLastTradedPrice()).isEqualTo(15600);
         assertThat(result.getOpeningPrice()).isEqualTo(15600);
-        assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(150);
-        assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
+        assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(50);
+        assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(50);
     }
 
     @Test
