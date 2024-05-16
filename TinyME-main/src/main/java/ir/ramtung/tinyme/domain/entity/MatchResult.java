@@ -25,7 +25,7 @@ public final class MatchResult {
                 false, tradableQuantity, openingPrice);
     }
     public static MatchResult queuedInAuction(Order remainder, int lastTradedPrice, int tradableQuantity, int openingPrice) {
-        return new MatchResult(MatchingOutcome.QUEUED_IN_AUCTION, remainder, new LinkedList<>(), lastTradedPrice,
+        return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(), lastTradedPrice,
                 false, tradableQuantity, openingPrice);
     }
     public static MatchResult deletedFromAuction(int lastTradedPrice, int tradableQuantity, int openingPrice) {
