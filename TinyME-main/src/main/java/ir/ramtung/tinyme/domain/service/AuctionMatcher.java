@@ -12,7 +12,7 @@ public class AuctionMatcher extends Matcher{
         return this.match(security);
     }
     public MatchResult match(Security security) {
-        int openingPrice = security.getLatestMatchingPrice();
+        int openingPrice = security.getOpeningPrice();
         int tradableQuantity = 0;
         boolean isMatchingOver = false;
         OrderBook orderBook = security.getOrderBook();
@@ -33,22 +33,21 @@ public class AuctionMatcher extends Matcher{
             }
             sellQueueCopy.removeFirst();
         }
-        return MatchResult.executedAuction(trades, openingPrice, tradableQuantity);
+        return MatchResult.executedAuction(trades, openingPrice, tradableQuantity, openingPrice);
     }
 
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
         if (brokerDoesNotHaveEnoughCredit(order))
-            return MatchResult.notEnoughCredit(order.getSecurity().getLatestMatchingPrice());
+            return MatchResult.notEnoughCredit(order.getSecurity().getLastTradedPrice(), order.getSecurity().getOpeningPrice());
 
         OrderBook orderBook = order.getSecurity().getOrderBook();
 
         decreaseBuyBrokerCredit(order);
         orderBook.enqueue(order);
-        //ToDo what happens when there's no orders in the orderbook or when none of them match?
         int newOpeningPrice = calculateOpeningPrice(orderBook);
         int tradableQuantity = calculateTradableQuantity(newOpeningPrice, orderBook);
-        return MatchResult.queuedInAuction(order, newOpeningPrice, tradableQuantity);
+        return MatchResult.queuedInAuction(order, order.getSecurity().getLastTradedPrice(), tradableQuantity, newOpeningPrice);
     }
 
     private int calculateOpeningPrice(OrderBook orderBook) {
@@ -86,6 +85,7 @@ public class AuctionMatcher extends Matcher{
         increaseBuyBrokerCredit(buyOrder, Math.abs(tradeQuantity * (openingPrice - sellOrder.getPrice())));
         decreaseOrderQuantity(sellOrder, buyOrder);
         removeSmallerOrder(orderBook, sellOrder, buyOrder);
+        adjustShareholderPositions(trades);
     }
 
     private boolean isAuctionOver(boolean isMatchingOver, LinkedList<Order> sellQueueCopy, OrderBook orderBook) {

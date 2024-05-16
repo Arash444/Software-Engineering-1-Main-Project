@@ -12,19 +12,26 @@ import ir.ramtung.tinyme.messaging.request.ChangingMatchingStateRq;
 import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
 import ir.ramtung.tinyme.messaging.request.MatchingState;
 import ir.ramtung.tinyme.repository.SecurityRepository;
+import org.springframework.stereotype.Service;
 
 import java.util.LinkedList;
 import java.util.List;
-
+@Service
 public class MatcherStateHandler {
     SecurityRepository securityRepository;
     EventPublisher eventPublisher;
     ContinuousMatcher continuousMatcher;
     AuctionMatcher auctionMatcher;
+    StopLimitOrderActivator stopLimitOrderActivator;
 
-    public MatcherStateHandler(SecurityRepository securityRepository, EventPublisher eventPublisher, Matcher matcher) {
+    public MatcherStateHandler(SecurityRepository securityRepository, EventPublisher eventPublisher,
+                               ContinuousMatcher continuousMatcher, AuctionMatcher auctionMatcher,
+                               StopLimitOrderActivator stopLimitOrderActivator) {
         this.securityRepository = securityRepository;
         this.eventPublisher = eventPublisher;
+        this.continuousMatcher = continuousMatcher;
+        this.auctionMatcher = auctionMatcher;
+        this.stopLimitOrderActivator = stopLimitOrderActivator;
     }
     public void handleChangingMatchingStateRq(ChangingMatchingStateRq matchingStateRq){
         MatchResult matchResult = null;
@@ -39,12 +46,21 @@ public class MatcherStateHandler {
         }
 
         MatchingState currentState = security.getMatchingState();
-        if(shouldOpenAuction(currentState, targetState))
+        if(shouldOpenAuction(currentState, targetState)) {
             matchResult = security.openAuction(auctionMatcher);
+        }
         security.setMatchingState(matchingStateRq.getTargetState());
-
         publishChangingMatchingStateRqEvents(targetState, security, matchResult);
+        activateStopLimitOrders(targetState, security);
     }
+
+    private void activateStopLimitOrders(MatchingState targetState, Security security) {
+        if(targetState == MatchingState.AUCTION)
+            stopLimitOrderActivator.handleStopLimitOrderActivation(-1, security, auctionMatcher, eventPublisher);
+        else
+            stopLimitOrderActivator.handleStopLimitOrderActivation(-1, security, continuousMatcher, eventPublisher);
+    }
+
     private void validateChangingMatchingStateRq(ChangingMatchingStateRq matchingStateRq) throws InvalidRequestException {
         List<String> errors = new LinkedList<>();
         Security security = securityRepository.findSecurityByIsin(matchingStateRq.getSecurityIsin());

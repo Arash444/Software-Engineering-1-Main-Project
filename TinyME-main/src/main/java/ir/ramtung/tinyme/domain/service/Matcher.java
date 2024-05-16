@@ -12,14 +12,6 @@ public abstract class Matcher {
     public abstract MatchResult match(Security security, Order order);
     protected abstract void removeSmallerOrder(OrderBook orderBook, Order order1, Order order2);
     protected abstract void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades, Order order1, Order order2, int tradeQuantity);
-    protected void replenishIcebergOrder(OrderBook orderBook, Order order) {
-        if (order instanceof IcebergOrder icebergOrder) {
-            icebergOrder.decreaseQuantity(order.getQuantity());
-            icebergOrder.replenish();
-            if (icebergOrder.getQuantity() > 0)
-                orderBook.enqueue(icebergOrder);
-        }
-    }
     protected void addNewTrade(int price, LinkedList<Trade> trades, Order newOrder, Order matchingOrder, int tradeQuantity) {
         Trade trade = new Trade(newOrder.getSecurity(), price, tradeQuantity, newOrder, matchingOrder);
         trade.increaseSellersCredit();
@@ -35,6 +27,14 @@ public abstract class Matcher {
         orderBook.removeFirst(order.getSide());
         replenishIcebergOrder(orderBook, order);
     }
+    protected void adjustShareholderPositions(LinkedList<Trade> trades) {
+        if (!trades.isEmpty()) {
+            for (Trade trade : trades) {
+                trade.getBuy().getShareholder().incPosition(trade.getSecurity(), trade.getQuantity());
+                trade.getSell().getShareholder().decPosition(trade.getSecurity(), trade.getQuantity());
+            }
+        }
+    }
     protected boolean brokerDoesNotHaveEnoughCredit(Order order) {
         return order.getSide() == Side.BUY && !order.getBroker().hasEnoughCredit(order.getValue());
     }
@@ -49,6 +49,14 @@ public abstract class Matcher {
     protected void increaseBuyBrokerCredit(Order order, long creditChange) {
         if (order.getSide() == Side.BUY)
             order.getBroker().increaseCreditBy(creditChange);
+    }
+    private void replenishIcebergOrder(OrderBook orderBook, Order order) {
+        if (order instanceof IcebergOrder icebergOrder) {
+            icebergOrder.decreaseQuantity(order.getQuantity());
+            icebergOrder.replenish();
+            if (icebergOrder.getQuantity() > 0)
+                orderBook.enqueue(icebergOrder);
+        }
     }
 
 }

@@ -2,10 +2,7 @@ package ir.ramtung.tinyme.domain;
 
 import ir.ramtung.tinyme.config.MockedJMSTestConfig;
 import ir.ramtung.tinyme.domain.entity.*;
-import ir.ramtung.tinyme.domain.service.AuctionMatcher;
-import ir.ramtung.tinyme.domain.service.ContinuousMatcher;
-import ir.ramtung.tinyme.domain.service.Matcher;
-import ir.ramtung.tinyme.domain.service.OrderHandler;
+import ir.ramtung.tinyme.domain.service.*;
 import ir.ramtung.tinyme.messaging.EventPublisher;
 import ir.ramtung.tinyme.messaging.Message;
 import ir.ramtung.tinyme.messaging.TradeDTO;
@@ -126,7 +123,7 @@ public class OrderHandlerTest {
 
         EventPublisher mockEventPublisher = mock(EventPublisher.class, withSettings().verboseLogging());
         OrderHandler myOrderHandler = new OrderHandler(securityRepository, brokerRepository, shareholderRepository,
-                mockEventPublisher, new ContinuousMatcher(), new AuctionMatcher());
+                mockEventPublisher, new ContinuousMatcher(), new AuctionMatcher(), new StopLimitOrderActivator());
         myOrderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1,
                 incomingSellOrder.getSecurity().getIsin(),
                 incomingSellOrder.getOrderId(),

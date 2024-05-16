@@ -17,8 +17,8 @@ public class ContinuousMatcher extends Matcher {
     public MatchResult match(Order newOrder) {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
-        int previous_last_traded_price = newOrder.getSecurity().getLatestMatchingPrice();
-        int last_traded_price = previous_last_traded_price;
+        int previousLastTradedPrice = newOrder.getSecurity().getLastTradedPrice();
+        int lastTradedPrice = previousLastTradedPrice;
         while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0) {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
@@ -27,17 +27,17 @@ public class ContinuousMatcher extends Matcher {
             addNewTrade(matchingOrder.getPrice(), trades, newOrder, matchingOrder, tradeQuantity);
             if (newOrder.getSide() == Side.BUY && !trades.getLast().buyerHasEnoughCredit()){
                 rollbackTradesBuy(newOrder, trades);
-                return MatchResult.notEnoughCredit(previous_last_traded_price);
+                return MatchResult.notEnoughCredit(previousLastTradedPrice, -1);
             }
-            last_traded_price = matchingOrder.getPrice();
+            lastTradedPrice = matchingOrder.getPrice();
             matchTheTwoOrders(-1, orderBook, trades,
                     matchingOrder, newOrder, -1);
         }
-        return MatchResult.executedContinuous(newOrder, trades, last_traded_price, hasActivatedOrder);
+        return MatchResult.executedContinuous(newOrder, trades, lastTradedPrice, hasActivatedOrder);
     }
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
-        int previous_last_traded_price = order.getSecurity().getLatestMatchingPrice();
+        int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
         if (!order.canTrade()) {
             StopLimitOrder stopLimitOrder = (StopLimitOrder) order;
             if(!stopLimitOrder.hasReachedStopPrice(previous_last_traded_price))
@@ -57,7 +57,7 @@ public class ContinuousMatcher extends Matcher {
             if (order.getSide() == Side.BUY) {
                 if (!order.getBroker().hasEnoughCredit(order.getValue())) {
                     rollbackTradesBuy(order, result.trades());
-                    return MatchResult.notEnoughCredit(previous_last_traded_price);
+                    return MatchResult.notEnoughCredit(previous_last_traded_price, -1);
                 }
                 order.getBroker().decreaseCreditBy(order.getValue());
             }
@@ -71,14 +71,10 @@ public class ContinuousMatcher extends Matcher {
                 rollbackTradesSell(order, result.trades());
             return MatchResult.notEnoughTradedQuantity(previous_last_traded_price);
         }
-        if (!result.trades().isEmpty()) {
-            for (Trade trade : result.trades()) {
-                trade.getBuy().getShareholder().incPosition(trade.getSecurity(), trade.getQuantity());
-                trade.getSell().getShareholder().decPosition(trade.getSecurity(), trade.getQuantity());
-            }
-        }
+        adjustShareholderPositions(result.trades());
         return result;
     }
+
     @Override
     protected void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades,
                                      Order matchingOrder, Order newOrder, int tradeQuantity) {
@@ -115,7 +111,7 @@ public class ContinuousMatcher extends Matcher {
     private MatchResult handleNonActivatedOrder(StopLimitOrder stopLimitOrder, int previous_last_traded_price) {
         if (stopLimitOrder.getSide() == Side.BUY) {
             if (!stopLimitOrder.getBroker().hasEnoughCredit(stopLimitOrder.getValue())) {
-                return MatchResult.notEnoughCredit(previous_last_traded_price);
+                return MatchResult.notEnoughCredit(previous_last_traded_price, -1);
             }
             stopLimitOrder.getBroker().decreaseCreditBy(stopLimitOrder.getValue());
         }
