@@ -2,8 +2,7 @@ package ir.ramtung.tinyme.domain;
 
 import ir.ramtung.tinyme.config.MockedJMSTestConfig;
 import ir.ramtung.tinyme.domain.entity.*;
-import ir.ramtung.tinyme.domain.service.Matcher;
-import ir.ramtung.tinyme.domain.service.OrderHandler;
+import ir.ramtung.tinyme.domain.service.*;
 import ir.ramtung.tinyme.messaging.EventPublisher;
 import ir.ramtung.tinyme.messaging.Message;
 import ir.ramtung.tinyme.messaging.TradeDTO;
@@ -95,6 +94,11 @@ public class OrderHandlerTest {
         security.getOrderBook().enqueue(matchingBuyOrder1);
         security.getOrderBook().enqueue(matchingBuyOrder2);
 
+        Trade trade1 = new Trade(security, matchingBuyOrder1.getPrice(), matchingBuyOrder1.getQuantity(),
+                matchingBuyOrder1, incomingSellOrder);
+        Trade trade2 = new Trade(security, matchingBuyOrder2.getPrice(), matchingBuyOrder2.getQuantity(),
+                matchingBuyOrder2, incomingSellOrder.snapshotWithQuantity(700));
+
         orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1,
                 incomingSellOrder.getSecurity().getIsin(),
                 incomingSellOrder.getOrderId(),
@@ -105,10 +109,6 @@ public class OrderHandlerTest {
                 incomingSellOrder.getBroker().getBrokerId(),
                 incomingSellOrder.getShareholder().getShareholderId(), 0, 0, 0));
 
-        Trade trade1 = new Trade(security, matchingBuyOrder1.getPrice(), matchingBuyOrder1.getQuantity(),
-                matchingBuyOrder1, incomingSellOrder);
-        Trade trade2 = new Trade(security, matchingBuyOrder2.getPrice(), matchingBuyOrder2.getQuantity(),
-                matchingBuyOrder2, incomingSellOrder.snapshotWithQuantity(700));
         verify(eventPublisher).publish(new OrderAcceptedEvent(1, 200));
         verify(eventPublisher).publish(new OrderExecutedEvent(1, 200, List.of(new TradeDTO(trade1), new TradeDTO(trade2))));
     }
@@ -122,7 +122,8 @@ public class OrderHandlerTest {
                 matchingBuyOrder, incomingSellOrder);
 
         EventPublisher mockEventPublisher = mock(EventPublisher.class, withSettings().verboseLogging());
-        OrderHandler myOrderHandler = new OrderHandler(securityRepository, brokerRepository, shareholderRepository, mockEventPublisher, new Matcher());
+        OrderHandler myOrderHandler = new OrderHandler(securityRepository, brokerRepository, shareholderRepository,
+                mockEventPublisher, new ContinuousMatcher(), new AuctionMatcher(), new StopLimitOrderActivator());
         myOrderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1,
                 incomingSellOrder.getSecurity().getIsin(),
                 incomingSellOrder.getOrderId(),
@@ -833,5 +834,21 @@ public class OrderHandlerTest {
         assertThat(broker2.getCredit()).isEqualTo(1_000_000);
         assertThat(broker3.getCredit()).isEqualTo(1_000_000 + 304*570 + 430*550);
 
+    }
+    @Test
+    void reject_new_orders_larger_than_shareholder_position()
+    {
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "ABC", 1,
+                LocalDateTime.now(), Side.SELL, 100_000, 15000, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 0));
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(2, "ABC", 2,
+                LocalDateTime.now(), Side.SELL, 100_000, 15000, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 0));
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(3, "ABC", 3,
+                LocalDateTime.now(), Side.SELL, 100_000, 15000, broker3.getBrokerId(),
+                shareholder.getShareholderId(), 0, 0, 0));
+        verify(eventPublisher).publish(new OrderAcceptedEvent(1, 1));
+        verify(eventPublisher).publish(new OrderRejectedEvent(2, 2, List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
+        verify(eventPublisher).publish(new OrderRejectedEvent(3, 3, List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
     }
 }

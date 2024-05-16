@@ -117,4 +117,11 @@ public class Order {
     public int getTotalQuantity() { return quantity; }
 
     public boolean canTrade() {return true;}
+
+    public boolean matchesWithPrice(int price) {
+        if (side == Side.BUY)
+            return this.price >= price;
+        else
+            return this.price <= price;
+    }
 }

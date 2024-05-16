@@ -2,9 +2,6 @@ package ir.ramtung.tinyme.domain.entity;
 
 import lombok.Getter;
 
-import java.util.List;
-import java.util.ListIterator;
-
 @Getter
 public class StopLimitOrderbook extends OrderBook {
     private int maxSellStopPrice;
@@ -36,8 +33,7 @@ public class StopLimitOrderbook extends OrderBook {
                 return sellOrder;
             }
         }
-
-        if (!getBuyQueue().isEmpty() && minBuyStopPriceIsLowerThan(lastTradedPrice)) {
+        else if (!getBuyQueue().isEmpty() && minBuyStopPriceIsLowerThan(lastTradedPrice)) {
             StopLimitOrder buyOrder = (StopLimitOrder) getBuyQueue().getFirst();
             if (buyOrder.hasReachedStopPrice(lastTradedPrice)) {
                 return buyOrder;
@@ -47,13 +43,13 @@ public class StopLimitOrderbook extends OrderBook {
     }
 
     private void updateMinMaxStopPrice(Side side)  {
-        if(side == Side.BUY)
+        if (side == Side.BUY)
             updateMinBuyStopPrice();
         else
             updateMaxSellStopPrice();
     }
     private void updateMaxSellStopPrice() {
-        if(!getSellQueue().isEmpty()) {
+        if (!getSellQueue().isEmpty()) {
             StopLimitOrder stopLimitOrder = (StopLimitOrder) getSellQueue().getFirst();
             maxSellStopPrice = stopLimitOrder.getStopPrice();
         }
@@ -61,14 +57,13 @@ public class StopLimitOrderbook extends OrderBook {
             maxSellStopPrice = 0;
     }
     private void updateMinBuyStopPrice() {
-        if(!getBuyQueue().isEmpty()) {
+        if (!getBuyQueue().isEmpty()) {
             StopLimitOrder stopLimitOrder = (StopLimitOrder) getBuyQueue().getFirst();
             minBuyStopPrice = stopLimitOrder.getStopPrice();
         }
         else
             minBuyStopPrice = Integer.MAX_VALUE;
     }
-    public void updateLastTradedPrice(int LastTradedPrice) {};
     private boolean maxSellStopPriceIsHigherThan(int lastTradedPrice) {return maxSellStopPrice >= lastTradedPrice;}
     private boolean minBuyStopPriceIsLowerThan(int lastTradedPrice) {return minBuyStopPrice <= lastTradedPrice;}
 }

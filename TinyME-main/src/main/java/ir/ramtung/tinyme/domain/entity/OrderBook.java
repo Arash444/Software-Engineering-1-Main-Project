@@ -28,7 +28,6 @@ public class OrderBook {
         order.queue();
         it.add(order);
     }
-
     private LinkedList<Order> getQueue(Side side) {
         return side == Side.BUY ? buyQueue : sellQueue;
     }
@@ -90,5 +89,25 @@ public class OrderBook {
                 .filter(order -> order.getShareholder().equals(shareholder))
                 .mapToInt(Order::getTotalQuantity)
                 .sum();
+    }
+    public int getLowestPriorityOrderPrice(Side side){
+        return getQueue(side).getLast().getPrice();
+    }
+
+    public LinkedList<Order> findAllMatchingOrdersWithPrice(int price, Side side) {
+        LinkedList<Order> matchingOrders = new LinkedList<>();
+        var queue = getQueue(side);
+        for (Order order : queue) {
+            if (order.matchesWithPrice(price))
+                matchingOrders.add(order);
+        }
+        return matchingOrders;
+    }
+    public Order matchWithFirstWithPrice(Side side, int price) {
+        var queue = getQueue(side.opposite());
+        if (queue.getFirst().matchesWithPrice(price))
+            return queue.getFirst();
+        else
+            return null;
     }
 }
