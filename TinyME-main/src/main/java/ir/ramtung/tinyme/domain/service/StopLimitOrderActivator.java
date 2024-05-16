@@ -23,7 +23,7 @@ public class StopLimitOrderActivator {
             StopLimitOrder stopLimitOrder = ordersToActivate.get(0);
             StopLimitOrder originalOrder = (StopLimitOrder) stopLimitOrder.snapshot();
             MatchResult matchResult = security.activateOrder(originalOrder, stopLimitOrder, matcher);
-            publishRelevantEvents(requestId, stopLimitOrder, matchResult, eventPublisher);
+            publishRelevantEvents(stopLimitOrder.getStopLimitRequestID(), stopLimitOrder, matchResult, eventPublisher);
             findNewActivatedOrders(security, ordersToActivate, matchResult);
             ordersToActivate.remove(0);
         }
