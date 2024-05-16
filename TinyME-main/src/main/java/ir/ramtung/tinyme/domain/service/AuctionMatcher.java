@@ -7,6 +7,7 @@ import java.util.LinkedList;
 
 @Service
 public class AuctionMatcher extends Matcher{
+    public static final int INVALID_PRICE = -1;
     @Override
     public MatchResult match (Security security, Order order){
         return this.match(security);
@@ -22,7 +23,7 @@ public class AuctionMatcher extends Matcher{
         while (!isAuctionOver(isMatchingOver, sellQueueCopy, orderBook)) {
             Order sellOrder = sellQueueCopy.getFirst();
             while (orderBook.hasOrderOfType(sellOrder.getSide().opposite()) && sellOrder.getQuantity() > 0) {
-                Order buyOrder = orderBook.matchWithFirstWithPrice(sellOrder.getSide(), openingPrice);
+                Order buyOrder = orderBook.matchWithFirst(sellOrder.getSide(), openingPrice);
                 if (buyOrder == null) {
                     isMatchingOver = true;
                     break;
@@ -33,7 +34,15 @@ public class AuctionMatcher extends Matcher{
             }
             sellQueueCopy.removeFirst();
         }
-        return MatchResult.executedAuction(trades, openingPrice, tradableQuantity, openingPrice);
+        return MatchResult.executedAuction(trades, getLastTradedPriceAfterMatch(security),
+                tradableQuantity, openingPrice);
+    }
+
+    private int getLastTradedPriceAfterMatch(Security security) {
+        if(security.getOpeningPrice() != INVALID_PRICE)
+            return security.getOpeningPrice();
+        else
+            return security.getLastTradedPrice();
     }
 
     @Override
@@ -51,7 +60,7 @@ public class AuctionMatcher extends Matcher{
     }
 
     private int calculateOpeningPrice(OrderBook orderBook) {
-        int maxTradebleQuantity = -1, newOpeningPrice = -1;
+        int maxTradebleQuantity = 0, newOpeningPrice = -1;
         int lowestPrice = orderBook.getLowestPriorityOrderPrice(Side.BUY);
         int highestPrice = orderBook.getLowestPriorityOrderPrice(Side.SELL);
 

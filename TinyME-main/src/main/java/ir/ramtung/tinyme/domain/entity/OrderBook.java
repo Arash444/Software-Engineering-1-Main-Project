@@ -8,6 +8,7 @@ import java.util.ListIterator;
 
 @Getter
 public class OrderBook {
+    public static final int INVALID_PRICE = -1;
     protected final LinkedList<Order> buyQueue;
     protected final LinkedList<Order> sellQueue;
 
@@ -103,9 +104,9 @@ public class OrderBook {
         }
         return matchingOrders;
     }
-    public Order matchWithFirstWithPrice(Side side, int price) {
+    public Order matchWithFirst(Side side, int price) {
         var queue = getQueue(side.opposite());
-        if (queue.getFirst().matchesWithPrice(price))
+        if (price != INVALID_PRICE && queue.getFirst().matchesWithPrice(price))
             return queue.getFirst();
         else
             return null;
