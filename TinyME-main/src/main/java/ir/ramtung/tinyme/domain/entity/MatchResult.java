@@ -28,8 +28,8 @@ public final class MatchResult {
         return new MatchResult(MatchingOutcome.EXECUTED, remainder, new LinkedList<>(), lastTradedPrice,
                 false, tradableQuantity, openingPrice);
     }
-    public static MatchResult deletedFromAuction(int lastTradedPrice, int tradableQuantity, int openingPrice) {
-        return new MatchResult(MatchingOutcome.DELETED_FROM_AUCTION, null, new LinkedList<>(),
+    public static MatchResult updateOpeningPrice(int lastTradedPrice, int tradableQuantity, int openingPrice) {
+        return new MatchResult(MatchingOutcome.UPDATE_OPENING_PRICE, null, new LinkedList<>(),
                 lastTradedPrice,false, tradableQuantity, openingPrice);
     }
     public static MatchResult notEnoughCredit(int lastTradedPrice, int openingPrice) {

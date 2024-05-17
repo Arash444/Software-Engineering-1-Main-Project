@@ -104,9 +104,9 @@ public class AuctionMatcher extends Matcher{
         return Math.min(totalBuyQuantity, totalSellQuantity);
     }
 
-    public MatchResult deletedOrderFromAuction(Security security) {
+    public MatchResult updateOpeningPrice(Security security) {
         int newOpeningPrice = calculateOpeningPrice(security.getOrderBook());
-        return MatchResult.deletedFromAuction(security.getLastTradedPrice(), newOpeningPrice,
+        return MatchResult.updateOpeningPrice(security.getLastTradedPrice(), newOpeningPrice,
                 calculateTradableQuantity(security.getOrderBook(), newOpeningPrice));
     }
 }

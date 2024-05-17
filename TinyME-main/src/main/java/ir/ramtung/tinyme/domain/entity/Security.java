@@ -219,8 +219,8 @@ public class Security {
         updateSecurityPrices(matchResult);
         return matchResult;
     }
-    public MatchResult postDeleteAuctionProcess(AuctionMatcher auctionMatcher) {
-        MatchResult matchResult = auctionMatcher.deletedOrderFromAuction(this);
+    public MatchResult updateOpeningPrice(AuctionMatcher auctionMatcher) {
+        MatchResult matchResult = auctionMatcher.updateOpeningPrice(this);
         updateSecurityPrices(matchResult);
         return matchResult;
     }

@@ -118,7 +118,7 @@ public class OrderHandler {
             security.deleteOrder(deleteOrderRq);
             eventPublisher.publish(new OrderDeletedEvent(deleteOrderRq.getRequestId(), deleteOrderRq.getOrderId()));
             if(security.getMatchingState() == MatchingState.AUCTION) {
-                MatchResult matchResult = security.postDeleteAuctionProcess(auctionMatcher);
+                MatchResult matchResult = security.updateOpeningPrice(auctionMatcher);
                 eventPublisher.publish(new OpeningPriceEvent(security.getIsin(), matchResult.getLastTradedPrice(),
                         matchResult.getTradableQuantity()));
             }
