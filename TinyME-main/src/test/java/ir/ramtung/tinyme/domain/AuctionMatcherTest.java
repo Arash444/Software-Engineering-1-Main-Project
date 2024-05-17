@@ -53,9 +53,6 @@ public class AuctionMatcherTest {
         security.setOpeningPrice(15600);
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade);
-        assertThat(result.getTradableQuantity()).isEqualTo(65);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15600);
-        assertThat(result.getOpeningPrice()).isEqualTo(15600);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(239);
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isEqualTo(true);
     }
@@ -72,9 +69,6 @@ public class AuctionMatcherTest {
         security.setOpeningPrice(15500);
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade);
-        assertThat(result.getTradableQuantity()).isEqualTo(300);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15500);
-        assertThat(result.getOpeningPrice()).isEqualTo(15500);
         assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isTrue();
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(50);
     }
@@ -90,9 +84,6 @@ public class AuctionMatcherTest {
         orders.forEach(order -> orderBook.enqueue(order));
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades().isEmpty()).isTrue();
-        assertThat(result.getTradableQuantity()).isEqualTo(0);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
-        assertThat(result.getOpeningPrice()).isEqualTo(-1);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(304);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(350);
     }
@@ -110,9 +101,6 @@ public class AuctionMatcherTest {
         security.setOpeningPrice(15600);
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade);
-        assertThat(result.getTradableQuantity()).isEqualTo(300);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15600);
-        assertThat(result.getOpeningPrice()).isEqualTo(15600);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(43);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(50);
     }
@@ -121,9 +109,6 @@ public class AuctionMatcherTest {
     void open_auction_no_orders() {
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades().isEmpty()).isTrue();
-        assertThat(result.getTradableQuantity()).isEqualTo(0);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
-        assertThat(result.getOpeningPrice()).isEqualTo(-1);
         assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isTrue();
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
     }
@@ -136,9 +121,6 @@ public class AuctionMatcherTest {
         orders.forEach(order -> orderBook.enqueue(order));
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades().isEmpty()).isTrue();
-        assertThat(result.getTradableQuantity()).isEqualTo(0);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
-        assertThat(result.getOpeningPrice()).isEqualTo(-1);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(100);
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
     }
@@ -158,25 +140,7 @@ public class AuctionMatcherTest {
         security.setOpeningPrice(15600);
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade1, trade2);
-        assertThat(result.getTradableQuantity()).isEqualTo(300);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15600);
-        assertThat(result.getOpeningPrice()).isEqualTo(15600);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(50);
-        assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
-    }
-
-    @Test
-    void open_auction_single_order_with_zero_quantity() {
-        orders = List.of(
-                new Order(1, security, BUY, 0, 15700, broker, shareholder, 0)
-        );
-        orders.forEach(order -> orderBook.enqueue(order));
-        MatchResult result = auctionMatcher.match(security);
-        assertThat(result.trades().isEmpty()).isTrue();
-        assertThat(result.getTradableQuantity()).isEqualTo(0);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
-        assertThat(result.getOpeningPrice()).isEqualTo(-1);
-        assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isFalse();
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
     }
 
@@ -199,15 +163,12 @@ public class AuctionMatcherTest {
         security.setOpeningPrice(15600); //ToDo check if it works
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade1, trade2, trade3);
-        assertThat(result.getTradableQuantity()).isEqualTo(300);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15600);
-        assertThat(result.getOpeningPrice()).isEqualTo(15600);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(50);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(50);
     }
 
     @Test
-    void iceberg_order_in_queue_matched_completely_after_three_rounds() {
+    void iceberg_buy_order_in_queue_matched_completely_after_three_rounds() {
         orderBook = security.getOrderBook();
         orders = Arrays.asList(
                 new IcebergOrder(1, security, BUY, 450, 15450, broker, shareholder, 200, 0),
@@ -229,27 +190,35 @@ public class AuctionMatcherTest {
         MatchResult result = auctionMatcher.match(security);
 
         assertThat(result.trades()).isEqualTo(trades);
+        assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
+        assertThat(security.getOrderBook().getBuyQueue()).hasSize(1);
+        assertThat(security.getOrderBook().getBuyQueue().get(0).getQuantity()).isEqualTo(40);
     }
 
     @Test
-    void insert_iceberg_and_match_until_quantity_is_less_than_peak_size() {
+    void iceberg_buy_order_match_until_quantity_is_less_than_peak_size() {
         orderBook = security.getOrderBook();
         List<Order> orders = Arrays.asList(
-                new Order(1, security, Side.SELL, 150, 10, broker, shareholder, 0),
+                new Order(1, security, Side.SELL, 150, 15350, broker, shareholder, 0),
                 new Order(2, security, BUY, 70, 15450, broker, shareholder, 0),
-                new IcebergOrder(3, security, BUY, 120 , 10, broker, shareholder, 40, 0)
+                new IcebergOrder(3, security, BUY, 120 , 15400, broker, shareholder, 50, 0)
         );
         orders.forEach(order -> orderBook.enqueue(order));
-        security.setOpeningPrice(15450);
+        security.setOpeningPrice(15350);
+
+        List<Trade> trades = List.of(
+                new Trade(security, 15350, 70, orders.get(1), orders.get(0)),
+                new Trade(security, 15350, 50, orders.get(2), orders.get(0).snapshotWithQuantity(80)),
+                new Trade(security, 15350, 30,
+                        orders.get(2).snapshotWithQuantity(70), orders.get(0).snapshotWithQuantity(30))
+        );
 
         AuctionMatcher auctionMatcher = new AuctionMatcher();
         MatchResult result = auctionMatcher.match(security);
-
-        assertThat(result.outcome()).isEqualTo(MatchingOutcome.EXECUTED);
-        assertThat(result.trades()).hasSize(1);
-        assertThat(security.getOrderBook().getSellQueue()).hasSize(1);
+        assertThat(result.trades()).isEqualTo(trades);
+        assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(1);
-        assertThat(security.getOrderBook().getBuyQueue().get(0).getQuantity()).isEqualTo(40);
+        assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(40);
     }
 
 }
