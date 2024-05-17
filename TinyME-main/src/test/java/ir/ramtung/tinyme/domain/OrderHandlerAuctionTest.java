@@ -5,9 +5,7 @@ import ir.ramtung.tinyme.domain.entity.*;
 import ir.ramtung.tinyme.domain.service.OrderHandler;
 import ir.ramtung.tinyme.messaging.EventPublisher;
 import ir.ramtung.tinyme.messaging.Message;
-import ir.ramtung.tinyme.messaging.event.OpeningPriceEvent;
-import ir.ramtung.tinyme.messaging.event.OrderAcceptedEvent;
-import ir.ramtung.tinyme.messaging.event.OrderRejectedEvent;
+import ir.ramtung.tinyme.messaging.event.*;
 import ir.ramtung.tinyme.messaging.request.DeleteOrderRq;
 import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
 import ir.ramtung.tinyme.messaging.request.MatchingState;
@@ -151,7 +149,7 @@ public class OrderHandlerAuctionTest {
         assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L);
     }
     @Test
-    void mixed_buy_sell_queue_add_new_buy_order_multiple_potential_opening_price_opening_price_is_last_traded_price() {
+    void mixed_buy_sell_queue_add_new_order_opening_price_opening_price_is_last_traded_price() {
         orders = List.of(
                 new Order(1, security, BUY, 200, 15010, buyBroker, shareholder, 0),
                 new Order(2, security, Side.SELL, 200, 15010, sellBroker, shareholder, 0),
@@ -165,7 +163,7 @@ public class OrderHandlerAuctionTest {
 
     }
     @Test
-    void mixed_buy_sell_queue_add_new_buy_order_multiple_potential_opening_price_opening_price_is_the_one_closer_to_last_traded_price() {
+    void mixed_buy_sell_queue_add_new_order_opening_price_is_the_one_closer_to_last_traded_price() {
         orders = List.of(
                 new Order(1, security, BUY, 200, 15500, buyBroker, shareholder, 0),
                 new Order(2, security, Side.SELL, 200, 15500, sellBroker, shareholder, 0),
@@ -191,6 +189,64 @@ public class OrderHandlerAuctionTest {
                 Side.BUY, 200, 15995, buyBroker.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0));
         verify(eventPublisher).publish(new OrderAcceptedEvent(1, 5));
         verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), -1, 0));
+    }
+    @Test
+    void mixed_buy_sell_queue_add_new_order_opening_price_is_the_one_with_the_highest_trade_quantity() {
+        orders = List.of(
+                new Order(1, security, BUY, 200, 15500, buyBroker, shareholder, 0),
+                new Order(2, security, Side.SELL, 200, 15500, sellBroker, shareholder, 0),
+                new Order(3, security, Side.SELL, 500, 15995, sellBroker, shareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "ABC", 5, LocalDateTime.now(),
+                Side.BUY, 600, 15995, buyBroker.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0));
+        verify(eventPublisher).publish(new OrderAcceptedEvent(1, 5));
+        verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 15995, 600));
+    }
+    @Test
+    void mixed_buy_sell_queue_update_order_opening_price_is_the_one_with_the_highest_trade_quantity() {
+        orders = List.of(
+                new Order(1, security, BUY, 200, 15500, buyBroker, shareholder, 0),
+                new Order(2, security, BUY, 600, 15995, buyBroker, shareholder, 0),
+                new Order(3, security, Side.SELL, 200, 15500, sellBroker, shareholder, 0),
+                new Order(4, security, Side.SELL, 500, 15995, sellBroker, shareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, "ABC", 2, LocalDateTime.now(),
+                Side.BUY, 700, 15995, buyBroker.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0));
+        verify(eventPublisher).publish(new OrderUpdatedEvent(1, 2));
+        verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 15995, 700));
+        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L - 100 * 15995);
+    }
+    @Test
+    void mixed_buy_sell_queue_delete_order_opening_price_is_the_one_with_the_highest_trade_quantity() {
+        orders = List.of(
+                new Order(1, security, BUY, 200, 15500, buyBroker, shareholder, 0),
+                new Order(2, security, BUY, 600, 15995, buyBroker, shareholder, 0),
+                new Order(3, security, Side.SELL, 200, 15500, sellBroker, shareholder, 0),
+                new Order(4, security, Side.SELL, 500, 15995, sellBroker, shareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        orderHandler.handleDeleteOrder(new DeleteOrderRq(1, security.getIsin(), BUY, 2));
+        verify(eventPublisher).publish(new OrderDeletedEvent(1, 2));
+        verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 15500, 200));
+        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L + 600 * 15995);
+    }
+    @Test
+    void orderbook_has_iceberg_order_should_consider_total_quantity_not_display_quantity() {
+        orders = Arrays.asList(
+                new IcebergOrder(1, security, Side.SELL, 600, 15450, sellBroker, shareholder, 100, 0),
+                new Order(2, security, Side.SELL, 100, 15450, sellBroker, shareholder, 0),
+                new Order(3, security, Side.SELL, 1000, 15500, sellBroker, shareholder, 0),
+                new IcebergOrder(4, security, BUY, 400, 15450, buyBroker, shareholder, 100, 0),
+                new Order(5, security, BUY, 100, 15450, buyBroker, shareholder, 0),
+                new Order(6, security, BUY, 120 , 15400, buyBroker, shareholder, 0),
+                new Order(7, security, BUY, 120 , 15400, buyBroker, shareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        orderHandler.handleDeleteOrder(new DeleteOrderRq(1, security.getIsin(), BUY, 7));
+        verify(eventPublisher).publish(new OrderDeletedEvent(1, 7));
+        verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 15450, 500));
     }
 
 }
