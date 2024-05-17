@@ -53,7 +53,7 @@ public class AuctionMatcher extends Matcher{
     @Override
     protected void matchTheTwoOrders(int openingPrice, OrderBook orderBook, LinkedList<Trade> trades, Order sellOrder, Order buyOrder, int tradeQuantity) {
         addNewTrade(openingPrice, trades, sellOrder, buyOrder, tradeQuantity);
-        adjustBrokerCredit(buyOrder, trades.getLast(), Math.abs(tradeQuantity * (openingPrice - sellOrder.getPrice())));
+        adjustBrokerCredit(buyOrder, trades.getLast(), Math.abs(tradeQuantity * (openingPrice - buyOrder.getPrice())));
         decreaseOrderQuantity(sellOrder, buyOrder);
         removeZeroQuantityOrder(orderBook, sellOrder, buyOrder);
         replenishIcebergOrder(orderBook, sellOrder, buyOrder);
