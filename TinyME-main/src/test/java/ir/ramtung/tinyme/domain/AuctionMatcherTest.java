@@ -321,4 +321,20 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getSellQueue()).hasSize(0);
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(0);
     }
+    @Test
+    void open_auction_complete_match_two_iceberg_orders() {
+        orders = Arrays.asList(
+                new IcebergOrder(1, security, BUY, 300, 15500, broker, shareholder, 200, 0),
+                new IcebergOrder(2, security, Side.SELL, 300, 15500, broker, shareholder, 200, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        Trade trade1 = new Trade(security, 15500, 200, orders.get(0), orders.get(1));
+        Trade trade2 = new Trade(security, 15500, 100,
+                orders.get(0).snapshotWithQuantity(100), orders.get(1).snapshotWithQuantity(100));
+        security.setOpeningPrice(15500);
+        MatchResult result = auctionMatcher.match(security);
+        assertThat(result.trades()).containsExactly(trade1, trade2);
+        assertThat(security.getOrderBook().getSellQueue()).hasSize(0);
+        assertThat(security.getOrderBook().getBuyQueue()).hasSize(0);
+    }
 }
