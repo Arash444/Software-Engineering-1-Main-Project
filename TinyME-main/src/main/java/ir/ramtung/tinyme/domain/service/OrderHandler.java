@@ -51,12 +51,11 @@ public class OrderHandler {
             Security security = securityRepository.findSecurityByIsin(enterOrderRq.getSecurityIsin());
             Broker broker = brokerRepository.findBrokerById(enterOrderRq.getBrokerId());
             Shareholder shareholder = shareholderRepository.findShareholderById(enterOrderRq.getShareholderId());
-            MatchingState currentMatchingState = security.getMatchingState();
             MatchResult matchResult;
             if (enterOrderRq.getRequestType() == OrderEntryType.NEW_ORDER) 
-                matchResult = enterNewOrder(enterOrderRq, security, broker, shareholder, currentMatchingState);
+                matchResult = enterNewOrder(enterOrderRq, security, broker, shareholder, security.getMatchingState());
             else
-                matchResult = enterUpdateOrder(enterOrderRq, security, currentMatchingState);
+                matchResult = enterUpdateOrder(enterOrderRq, security, security.getMatchingState());
 
             if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
                 eventPublisher.publish(new OrderRejectedEvent(requestId, orderId,
@@ -84,8 +83,8 @@ public class OrderHandler {
                         matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
                 stopLimitOrderActivator.handleStopLimitOrderActivation(security, continuousMatcher, eventPublisher);
             }
-            if (currentMatchingState == MatchingState.AUCTION)
-                eventPublisher.publish(new OpeningPriceEvent(security.getIsin(), matchResult.getLastTradedPrice(),
+            if (security.getMatchingState() == MatchingState.AUCTION)
+                eventPublisher.publish(new OpeningPriceEvent(security.getIsin(), matchResult.getOpeningPrice(),
                         matchResult.getTradableQuantity()));
 
         } catch (InvalidRequestException ex) {
