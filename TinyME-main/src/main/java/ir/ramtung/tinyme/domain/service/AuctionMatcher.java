@@ -15,22 +15,24 @@ public class AuctionMatcher extends Matcher{
     public MatchResult match(Security security) {
         int tradableQuantity = 0;
         boolean isMatchingOver = false;
-        LinkedList<Order> sellQueueCopy = new LinkedList<>(security.getOrderBook().getSellQueue());
         LinkedList<Trade> trades = new LinkedList<>();
 
-        while (!isAuctionOver(isMatchingOver, sellQueueCopy, security)) {
-            Order sellOrder = sellQueueCopy.getFirst();
+        while (!isAuctionOver(isMatchingOver, security)) {
+            Order sellOrder = security.getOrderBook().getSellQueue().getFirst();
+            if(!sellOrder.matchesWithPrice(security.getOpeningPrice()))
+                break;
             while (security.getOrderBook().hasOrderOfType(sellOrder.getSide().opposite()) && sellOrder.getQuantity() > 0) {
-                Order buyOrder = security.getOrderBook().matchWithFirst(sellOrder.getSide(), security.getOpeningPrice());
-                if (buyOrder == null) {
+                Order buyOrder = security.getOrderBook().getBuyQueue().getFirst();
+                if (!buyOrder.matchesWithPrice(security.getOpeningPrice())) {
                     isMatchingOver = true;
                     break;
                 }
                 int tradeQuantity = Math.min(sellOrder.getQuantity(), buyOrder.getQuantity());
                 tradableQuantity += tradeQuantity;
                 matchTheTwoOrders(security.getOpeningPrice(), security.getOrderBook(), trades, sellOrder, buyOrder, tradeQuantity);
+                if (sellOrder instanceof IcebergOrder)
+                    break;
             }
-            sellQueueCopy.removeFirst();
         }
         return MatchResult.executedAuction(trades, getLastTradedPriceAfterMatch(security),
                 tradableQuantity, security.getOpeningPrice());
@@ -69,9 +71,8 @@ public class AuctionMatcher extends Matcher{
         adjustShareholderPositions(trades);
     }
 
-    private boolean isAuctionOver(boolean isMatchingOver, LinkedList<Order> sellQueueCopy, Security security) {
-        return isMatchingOver || sellQueueCopy.isEmpty() || security.getOpeningPrice() == -1 ||
-                !security.getOrderBook().hasOrderOfType(Side.BUY)
+    private boolean isAuctionOver(boolean isMatchingOver, Security security) {
+        return isMatchingOver || security.getOpeningPrice() == -1 || !security.getOrderBook().hasOrderOfType(Side.BUY)
                 || !security.getOrderBook().hasOrderOfType(Side.SELL);
     }
 
