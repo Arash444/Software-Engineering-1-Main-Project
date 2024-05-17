@@ -40,7 +40,7 @@ public class MatcherStateHandler {
             eventPublisher.publish(new MatchingStateRqRejectedEvent(security.getIsin(), ex.getReasons()));
             return;
         }
-        
+
         MatchResult matchResult = null;
         if(shouldOpenAuction(security.getMatchingState())) {
             matchResult = security.openAuction(auctionMatcher);

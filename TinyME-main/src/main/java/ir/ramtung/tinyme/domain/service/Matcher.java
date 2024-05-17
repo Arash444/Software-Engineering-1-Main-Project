@@ -10,7 +10,6 @@ public abstract class Matcher {
 
     public abstract MatchResult execute(Order order, Boolean isAmendOrder);
     public abstract MatchResult match(Security security, Order order);
-    protected abstract void removeSmallerOrder(OrderBook orderBook, Order order1, Order order2);
     protected abstract void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades, Order order1, Order order2, int tradeQuantity);
     protected void addNewTrade(int price, LinkedList<Trade> trades, Order newOrder, Order matchingOrder, int tradeQuantity) {
         Trade trade = new Trade(newOrder.getSecurity(), price, tradeQuantity, newOrder, matchingOrder);
@@ -23,8 +22,12 @@ public abstract class Matcher {
         order2.decreaseQuantity(minQuantity);
     }
     protected void removeZeroQuantityOrder(OrderBook orderBook, Order order) {
-        orderBook.removeFirst(order.getSide());
-        replenishIcebergOrder(orderBook, order);
+        if(order.getQuantity() == 0)
+            orderBook.removeFirst(order.getSide());
+    }
+    protected void removeZeroQuantityOrder(OrderBook orderBook, Order order1, Order order2) {
+        removeZeroQuantityOrder(orderBook, order1);
+        removeZeroQuantityOrder(orderBook, order2);
     }
     protected void adjustShareholderPositions(LinkedList<Trade> trades) {
         if (!trades.isEmpty()) {
@@ -51,13 +54,17 @@ public abstract class Matcher {
         if (order.getSide() == Side.BUY)
             order.getBroker().increaseCreditBy(creditChange);
     }
-    private void replenishIcebergOrder(OrderBook orderBook, Order order) {
+    protected void replenishIcebergOrder(OrderBook orderBook, Order order) {
         if (order instanceof IcebergOrder icebergOrder) {
-            icebergOrder.decreaseQuantity(order.getQuantity());
             icebergOrder.replenish();
-            if (icebergOrder.getQuantity() > 0)
+            if (icebergOrder.getQuantity() > 0 &&
+                    orderBook.findByOrderId(icebergOrder.getSide(), icebergOrder.getOrderId()) == null)
                 orderBook.enqueue(icebergOrder);
         }
+    }
+    protected void replenishIcebergOrder(OrderBook orderBook, Order order1, Order order2) {
+        replenishIcebergOrder(orderBook, order1);
+        replenishIcebergOrder(orderBook, order2);
     }
 
 }

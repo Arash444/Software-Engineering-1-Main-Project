@@ -80,12 +80,8 @@ public class ContinuousMatcher extends Matcher {
                                      Order matchingOrder, Order newOrder, int tradeQuantity) {
         adjustBrokerCredit(newOrder, trades.getLast());
         decreaseOrderQuantity(newOrder, matchingOrder);
-        removeSmallerOrder(orderBook, newOrder, matchingOrder);
-    }
-    @Override
-    protected void removeSmallerOrder(OrderBook orderBook, Order newOrder, Order matchingOrder) {
-        if (matchingOrder.getQuantity() == 0)
-            removeZeroQuantityOrder(orderBook, matchingOrder);
+        removeZeroQuantityOrder(orderBook, matchingOrder);
+        replenishIcebergOrder(orderBook, matchingOrder);
     }
 
     private void rollbackTradesBuy(Order newOrder, LinkedList<Trade> trades) {

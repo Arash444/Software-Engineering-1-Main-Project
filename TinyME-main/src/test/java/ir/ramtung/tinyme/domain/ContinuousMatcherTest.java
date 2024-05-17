@@ -129,7 +129,7 @@ public class ContinuousMatcherTest {
                 new Order(1, security, Side.SELL, 100, 10, broker, shareholder, 0)
         );
 
-        Order order = new IcebergOrder(1, security, BUY, 120 , 10, broker, shareholder, 40, 0);
+        Order order = new IcebergOrder(1, security, BUY, 120 , 10, broker, shareholder, 30, 0);
         MatchResult result = continuousMatcher.execute(order, false);
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.EXECUTED);

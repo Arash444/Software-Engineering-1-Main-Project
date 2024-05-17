@@ -64,7 +64,8 @@ public class AuctionMatcher extends Matcher{
         addNewTrade(openingPrice, trades, sellOrder, buyOrder, tradeQuantity);
         adjustBrokerCredit(buyOrder, trades.getLast(), Math.abs(tradeQuantity * (openingPrice - sellOrder.getPrice())));
         decreaseOrderQuantity(sellOrder, buyOrder);
-        removeSmallerOrder(orderBook, sellOrder, buyOrder);
+        removeZeroQuantityOrder(orderBook, sellOrder, buyOrder);
+        replenishIcebergOrder(orderBook, sellOrder, buyOrder);
         adjustShareholderPositions(trades);
     }
 
@@ -72,13 +73,6 @@ public class AuctionMatcher extends Matcher{
         return isMatchingOver || sellQueueCopy.isEmpty() || security.getOpeningPrice() == -1 ||
                 !security.getOrderBook().hasOrderOfType(Side.BUY)
                 || !security.getOrderBook().hasOrderOfType(Side.SELL);
-    }
-    @Override
-    protected void removeSmallerOrder(OrderBook orderBook, Order sellOrder, Order buyOrder) {
-        if (sellOrder.getQuantity() == 0)
-            removeZeroQuantityOrder(orderBook, sellOrder);
-        if (buyOrder.getQuantity() == 0)
-            removeZeroQuantityOrder(orderBook, buyOrder);
     }
 
     public int calculateOpeningPrice(OrderBook orderBook) {
