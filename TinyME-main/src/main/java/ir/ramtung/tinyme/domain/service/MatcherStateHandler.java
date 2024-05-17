@@ -40,8 +40,11 @@ public class MatcherStateHandler {
             eventPublisher.publish(new MatchingStateRqRejectedEvent(security.getIsin(), ex.getReasons()));
             return;
         }
-
-        MatchResult matchResult = openAuction(security, security.getMatchingState());
+        
+        MatchResult matchResult = null;
+        if(shouldOpenAuction(security.getMatchingState())) {
+            matchResult = security.openAuction(auctionMatcher);
+        }
         security.setMatchingState(matchingStateRq.getTargetState());
         publishChangingMatchingStateRqEvents(matchingStateRq.getTargetState(), security, matchResult);
         activateStopLimitOrders(matchingStateRq.getTargetState(), security, security.getMatchingState());
@@ -57,20 +60,17 @@ public class MatcherStateHandler {
     }
 
     private void activateStopLimitOrders(MatchingState targetState, Security security, MatchingState currentState) {
-        if(shouldOpenAuction(currentState))
-            activateStopLimitOrders(targetState, security);
+        if(shouldOpenAuction(currentState)) {
+            if (targetState == MatchingState.AUCTION)
+                stopLimitOrderActivator.handleStopLimitOrderActivation(security, auctionMatcher, eventPublisher);
+            else
+                stopLimitOrderActivator.handleStopLimitOrderActivation(security, continuousMatcher, eventPublisher);
+        }
     }
 
     private void updateOpeningPrice(MatchingState targetState, Security security) {
         if(shouldUpdateOpeningPrice(targetState))
             security.updateOpeningPrice(auctionMatcher);
-    }
-
-    private void activateStopLimitOrders(MatchingState targetState, Security security) {
-        if(targetState == MatchingState.AUCTION)
-            stopLimitOrderActivator.handleStopLimitOrderActivation(security, auctionMatcher, eventPublisher);
-        else
-            stopLimitOrderActivator.handleStopLimitOrderActivation(security, continuousMatcher, eventPublisher);
     }
 
     private void validateChangingMatchingStateRq(ChangingMatchingStateRq matchingStateRq) throws InvalidRequestException {
