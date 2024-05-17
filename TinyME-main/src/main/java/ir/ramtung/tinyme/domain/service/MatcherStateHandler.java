@@ -32,8 +32,6 @@ public class MatcherStateHandler {
         this.stopLimitOrderActivator = stopLimitOrderActivator;
     }
     public void handleChangingMatchingStateRq(ChangingMatchingStateRq matchingStateRq){
-        MatchResult matchResult = null;
-        MatchingState targetState = matchingStateRq.getTargetState();
         Security security = securityRepository.findSecurityByIsin(matchingStateRq.getSecurityIsin());
 
         try {
@@ -43,16 +41,28 @@ public class MatcherStateHandler {
             return;
         }
 
-        MatchingState currentState = security.getMatchingState();
-        if(shouldOpenAuction(currentState, targetState)) {
+        MatchResult matchResult = openAuction(security, security.getMatchingState());
+        security.setMatchingState(matchingStateRq.getTargetState());
+        publishChangingMatchingStateRqEvents(matchingStateRq.getTargetState(), security, matchResult);
+        activateStopLimitOrders(matchingStateRq.getTargetState(), security, security.getMatchingState());
+        updateOpeningPrice(matchingStateRq.getTargetState(), security);
+    }
+
+    private MatchResult openAuction(Security security, MatchingState currentState) {
+        MatchResult matchResult = null;
+        if(shouldOpenAuction(currentState)) {
             matchResult = security.openAuction(auctionMatcher);
         }
-        security.setMatchingState(matchingStateRq.getTargetState());
-        publishChangingMatchingStateRqEvents(targetState, security, matchResult);
+        return matchResult;
+    }
 
-        if(shouldOpenAuction(currentState, targetState))
+    private void activateStopLimitOrders(MatchingState targetState, Security security, MatchingState currentState) {
+        if(shouldOpenAuction(currentState))
             activateStopLimitOrders(targetState, security);
-        if(continuousToAuction(currentState, targetState))
+    }
+
+    private void updateOpeningPrice(MatchingState targetState, Security security) {
+        if(shouldUpdateOpeningPrice(targetState))
             security.updateOpeningPrice(auctionMatcher);
     }
 
@@ -84,11 +94,10 @@ public class MatcherStateHandler {
         }
     }
 
-    private boolean shouldOpenAuction(MatchingState currentState, MatchingState newState){
-        return currentState == MatchingState.AUCTION &&
-                (newState == MatchingState.AUCTION || newState == MatchingState.CONTINUOUS);
+    private boolean shouldOpenAuction(MatchingState currentState){
+        return currentState == MatchingState.AUCTION;
     }
-    private boolean continuousToAuction(MatchingState currentState, MatchingState newState){
-        return currentState == MatchingState.CONTINUOUS && newState == MatchingState.AUCTION;
+    private boolean shouldUpdateOpeningPrice(MatchingState targetState){
+        return targetState == MatchingState.AUCTION;
     }
 }
