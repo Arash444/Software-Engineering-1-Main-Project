@@ -121,8 +121,8 @@ public class AuctionMatcher extends Matcher{
     }
     public MatchResult updateOpeningPrice(Security security) {
         int newOpeningPrice = calculateOpeningPrice(security.getOrderBook(), security.getLastTradedPrice());
-        return MatchResult.updateOpeningPrice(security.getLastTradedPrice(), newOpeningPrice,
-                calculateTradableQuantity(security.getOrderBook(), newOpeningPrice));
+        return MatchResult.updateOpeningPrice(security.getLastTradedPrice(),
+                calculateTradableQuantity(security.getOrderBook(), newOpeningPrice), newOpeningPrice);
     }
     private int getLastTradedPriceAfterMatch(Security security) {
         if(security.getOpeningPrice() != INVALID_PRICE)
