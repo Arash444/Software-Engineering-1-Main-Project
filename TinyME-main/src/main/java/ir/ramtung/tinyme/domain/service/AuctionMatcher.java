@@ -111,10 +111,10 @@ public class AuctionMatcher extends Matcher{
         LinkedList<Order> matchingSellOrders = orderBook.findAllMatchingOrdersWithPrice(newOpeningPrice, Side.SELL);
 
         int totalBuyQuantity = matchingBuyOrders.stream()
-                .mapToInt(Order::getQuantity)
+                .mapToInt(Order::getTotalQuantity)
                 .sum();
         int totalSellQuantity = matchingSellOrders.stream()
-                .mapToInt(Order::getQuantity)
+                .mapToInt(Order::getTotalQuantity)
                 .sum();
 
         return Math.min(totalBuyQuantity, totalSellQuantity);
