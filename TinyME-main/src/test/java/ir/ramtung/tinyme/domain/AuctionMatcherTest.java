@@ -56,6 +56,7 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(2);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(239);
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
+        assertThat(result.getLastTradedPrice()).isEqualTo(15600);
     }
 
     @Test
@@ -73,6 +74,7 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isTrue();
         assertThat(security.getOrderBook().getSellQueue()).hasSize(2);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(50);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15500);
     }
 
     @Test
@@ -90,6 +92,7 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(2);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(304);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(350);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
     }
 
     @Test
@@ -109,6 +112,7 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(2);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(50);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(100);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15600);
     }
 
     @Test
@@ -117,6 +121,7 @@ public class AuctionMatcherTest {
         assertThat(result.trades().isEmpty()).isTrue();
         assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isTrue();
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
+        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
     }
 
     @Test
@@ -129,6 +134,7 @@ public class AuctionMatcherTest {
         assertThat(result.trades().isEmpty()).isTrue();
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(100);
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
+        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
     }
 
     @Test
@@ -148,6 +154,7 @@ public class AuctionMatcherTest {
         assertThat(result.trades()).containsExactly(trade1, trade2);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(50);
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
+        assertThat(result.getLastTradedPrice()).isEqualTo(15600);
     }
 
     @Test
@@ -171,6 +178,7 @@ public class AuctionMatcherTest {
         assertThat(result.trades()).containsExactly(trade1, trade2, trade3);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(50);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(50);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15600);
     }
 
     @Test
@@ -201,6 +209,7 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(1);
         assertThat(security.getOrderBook().getBuyQueue().get(0).getQuantity()).isEqualTo(1000);
         assertThat(security.getOrderBook().getSellQueue().get(0).getQuantity()).isEqualTo(80);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15450);
     }
 
     @Test
@@ -226,6 +235,7 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(1);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(40);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15450);
     }
     @Test
     void iceberg_sell_order_match_until_quantity_is_less_than_peak_size() {
@@ -250,6 +260,7 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isTrue();
         assertThat(security.getOrderBook().getSellQueue()).hasSize(1);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(20);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15450);
     }
     @Test
     void iceberg_sell_order_in_queue_matched_completely_after_three_rounds() {
@@ -279,6 +290,7 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(1);
         assertThat(security.getOrderBook().getBuyQueue().get(0).getQuantity()).isEqualTo(80);
         assertThat(security.getOrderBook().getSellQueue().get(0).getQuantity()).isEqualTo(1000);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15450);
     }
     @Test
     void iceberg_sell_and_buy_order_with_remaining_sell_quantity_less_than_peak_size() {
@@ -306,6 +318,7 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(1);
         assertThat(security.getOrderBook().getBuyQueue().get(0).getQuantity()).isEqualTo(120);
         assertThat(security.getOrderBook().getSellQueue().get(0).getQuantity()).isEqualTo(100);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15450);
     }
     @Test
     void open_auction_complete_match_two_orders() {
@@ -320,6 +333,7 @@ public class AuctionMatcherTest {
         assertThat(result.trades()).containsExactly(trade);
         assertThat(security.getOrderBook().getSellQueue()).hasSize(0);
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(0);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15500);
     }
     @Test
     void open_auction_complete_match_two_iceberg_orders() {
@@ -336,5 +350,6 @@ public class AuctionMatcherTest {
         assertThat(result.trades()).containsExactly(trade1, trade2);
         assertThat(security.getOrderBook().getSellQueue()).hasSize(0);
         assertThat(security.getOrderBook().getBuyQueue()).hasSize(0);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15500);
     }
 }
