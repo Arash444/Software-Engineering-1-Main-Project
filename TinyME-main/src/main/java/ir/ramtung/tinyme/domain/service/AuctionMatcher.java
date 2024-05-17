@@ -68,14 +68,13 @@ public class AuctionMatcher extends Matcher{
     }
 
     public int calculateOpeningPrice(OrderBook orderBook, int lastTradedPrice) {
-        int maxTradeableQuantity = 0;
+        int maxTradeableQuantity = 1;
         ArrayList<Integer> potentialPrices = new ArrayList<>();
         int lowestPrice = orderBook.getLowestPriorityOrderPrice(Side.BUY);
         int highestPrice = orderBook.getLowestPriorityOrderPrice(Side.SELL);
-
-        if (lowestPrice == INVALID_PRICE || highestPrice == INVALID_PRICE) {
+        if (lowestPrice == INVALID_PRICE || highestPrice == INVALID_PRICE)
             return INVALID_PRICE;
-        }
+
         for (int openingPrice = lowestPrice; openingPrice <= highestPrice; openingPrice++) {
             int tradeableQuantity = calculateTradableQuantity(orderBook, openingPrice);
             if (tradeableQuantity >= maxTradeableQuantity) {
@@ -86,9 +85,8 @@ public class AuctionMatcher extends Matcher{
                 potentialPrices.add(openingPrice);
             }
         }
-        if (potentialPrices.isEmpty()) {
+        if (potentialPrices.isEmpty())
             return INVALID_PRICE;
-        }
         return openingPriceClosestToLastTradedPrice(lastTradedPrice, potentialPrices);
     }
 
