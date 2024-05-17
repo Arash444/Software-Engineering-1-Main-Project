@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class StopLimitOrderActivator {
-    public void handleStopLimitOrderActivation(long requestId, Security security, Matcher matcher, EventPublisher eventPublisher) {
+    public void handleStopLimitOrderActivation(Security security, Matcher matcher, EventPublisher eventPublisher) {
         List<StopLimitOrder> ordersToActivate = security.findActivatedOrders();
         while (!ordersToActivate.isEmpty()) {
             StopLimitOrder stopLimitOrder = ordersToActivate.get(0);

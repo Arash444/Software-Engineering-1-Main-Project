@@ -4,12 +4,10 @@ import ir.ramtung.tinyme.domain.entity.*;
 import ir.ramtung.tinyme.messaging.EventPublisher;
 import ir.ramtung.tinyme.messaging.Message;
 import ir.ramtung.tinyme.messaging.event.MatchingStateRqRejectedEvent;
-import ir.ramtung.tinyme.messaging.event.OrderRejectedEvent;
 import ir.ramtung.tinyme.messaging.event.SecurityStateChangedEvent;
 import ir.ramtung.tinyme.messaging.event.TradeEvent;
 import ir.ramtung.tinyme.messaging.exception.InvalidRequestException;
 import ir.ramtung.tinyme.messaging.request.ChangingMatchingStateRq;
-import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
 import ir.ramtung.tinyme.messaging.request.MatchingState;
 import ir.ramtung.tinyme.repository.SecurityRepository;
 import org.springframework.stereotype.Service;
@@ -60,9 +58,9 @@ public class MatcherStateHandler {
 
     private void activateStopLimitOrders(MatchingState targetState, Security security) {
         if(targetState == MatchingState.AUCTION)
-            stopLimitOrderActivator.handleStopLimitOrderActivation(-1, security, auctionMatcher, eventPublisher);
+            stopLimitOrderActivator.handleStopLimitOrderActivation(security, auctionMatcher, eventPublisher);
         else
-            stopLimitOrderActivator.handleStopLimitOrderActivation(-1, security, continuousMatcher, eventPublisher);
+            stopLimitOrderActivator.handleStopLimitOrderActivation(security, continuousMatcher, eventPublisher);
     }
 
     private void validateChangingMatchingStateRq(ChangingMatchingStateRq matchingStateRq) throws InvalidRequestException {

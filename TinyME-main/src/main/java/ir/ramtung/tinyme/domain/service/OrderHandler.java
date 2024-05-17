@@ -82,7 +82,7 @@ public class OrderHandler {
             if (!matchResult.trades().isEmpty()) {
                 eventPublisher.publish(new OrderExecutedEvent(requestId, orderId,
                         matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
-                stopLimitOrderActivator.handleStopLimitOrderActivation(requestId, security, continuousMatcher, eventPublisher);
+                stopLimitOrderActivator.handleStopLimitOrderActivation(security, continuousMatcher, eventPublisher);
             }
             if (currentMatchingState == MatchingState.AUCTION)
                 eventPublisher.publish(new OpeningPriceEvent(security.getIsin(), matchResult.getLastTradedPrice(),
