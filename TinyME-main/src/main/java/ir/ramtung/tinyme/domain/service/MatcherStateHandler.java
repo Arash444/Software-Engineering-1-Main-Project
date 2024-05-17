@@ -32,15 +32,14 @@ public class MatcherStateHandler {
         this.stopLimitOrderActivator = stopLimitOrderActivator;
     }
     public void handleChangingMatchingStateRq(ChangingMatchingStateRq matchingStateRq){
-        Security security = securityRepository.findSecurityByIsin(matchingStateRq.getSecurityIsin());
-
         try {
             validateChangingMatchingStateRq(matchingStateRq);
         } catch (InvalidRequestException ex) {
-            eventPublisher.publish(new MatchingStateRqRejectedEvent(security.getIsin(), ex.getReasons()));
+            eventPublisher.publish(new MatchingStateRqRejectedEvent(matchingStateRq.getSecurityIsin(), ex.getReasons()));
             return;
         }
 
+        Security security = securityRepository.findSecurityByIsin(matchingStateRq.getSecurityIsin());
         MatchResult matchResult = null;
         if(shouldOpenAuction(security.getMatchingState())) {
             matchResult = security.openAuction(auctionMatcher);
