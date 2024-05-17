@@ -2,6 +2,7 @@ package ir.ramtung.tinyme.domain;
 
 import ir.ramtung.tinyme.config.MockedJMSTestConfig;
 import ir.ramtung.tinyme.domain.entity.*;
+import ir.ramtung.tinyme.domain.service.AuctionMatcher;
 import ir.ramtung.tinyme.domain.service.ContinuousMatcher;
 import ir.ramtung.tinyme.messaging.exception.InvalidRequestException;
 import ir.ramtung.tinyme.messaging.request.DeleteOrderRq;
@@ -195,6 +196,72 @@ class SecurityTest {
         assertThat(result.trades()).hasSize(2);
         assertThat(result.remainder().getQuantity()).isZero();
     }
+    @Test
+    void update_opening_price_works_no_one_matches(){
+        MatchResult result = security.updateOpeningPrice(new AuctionMatcher());
+        assertThat(result.getTradableQuantity()).isEqualTo(0);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
+        assertThat(result.getOpeningPrice()).isEqualTo(-1);
+        assertThat(security.getLastTradedPrice()).isEqualTo(15000);
+        assertThat(security.getOpeningPrice()).isEqualTo(-1);
+    }
+    @Test
+    void update_opening_price_works_mixed_sell_buy_queue(){
+        Security security1 = Security.builder().isin("TEST").build();
+        orders = List.of(
+                new Order(1, security, BUY, 200, 15500, broker, shareholder, 0),
+                new Order(2, security, BUY, 600, 15995, broker, shareholder, 0),
+                new Order(3, security, Side.SELL, 200, 15500, broker, shareholder, 0),
+                new Order(4, security, Side.SELL, 500, 15995, broker, shareholder, 0)
+        );
+        orders.forEach(order -> security1.getOrderBook().enqueue(order));
+        MatchResult result = security1.updateOpeningPrice(new AuctionMatcher());
 
+        assertThat(result.getTradableQuantity()).isEqualTo(600);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
+        assertThat(result.getOpeningPrice()).isEqualTo(15995);
+        assertThat(security1.getLastTradedPrice()).isEqualTo(15000);
+        assertThat(security1.getOpeningPrice()).isEqualTo(15995);
+    }
+
+    @Test
+    void opening_auction_works_mixed_sell_buy_queue(){
+        Security security1 = Security.builder().isin("TEST").build();
+        orders = List.of(
+                new Order(1, security, BUY, 200, 15500, broker, shareholder, 0),
+                new Order(2, security, BUY, 600, 15995, broker, shareholder, 0),
+                new Order(3, security, Side.SELL, 200, 15500, broker, shareholder, 0),
+                new Order(4, security, Side.SELL, 500, 15995, broker, shareholder, 0)
+        );
+        orders.forEach(order -> security1.getOrderBook().enqueue(order));
+        security1.setOpeningPrice(15995);
+        MatchResult result = security1.openAuction(new AuctionMatcher());
+
+        assertThat(result.getTradableQuantity()).isEqualTo(600);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15995);
+        assertThat(result.getOpeningPrice()).isEqualTo(15995);
+        assertThat(security1.getLastTradedPrice()).isEqualTo(15995);
+        assertThat(security1.getOpeningPrice()).isEqualTo(15995);
+    }
+    @Test
+    void update_security_prices_works_when_adding_an_order_to_an_auction(){
+        Security security1 = Security.builder().isin("TEST").build();
+        orders = List.of(
+                new Order(1, security, BUY, 200, 15500, broker, shareholder, 0),
+                new Order(3, security, Side.SELL, 200, 15500, broker, shareholder, 0),
+                new Order(4, security, Side.SELL, 500, 15995, broker, shareholder, 0)
+        );
+        orders.forEach(order -> security1.getOrderBook().enqueue(order));
+        broker.increaseCreditBy(10_000_000L);
+        MatchResult result = security1.newOrder(EnterOrderRq.createNewOrderRq(1, "ABC", 5, LocalDateTime.now(),
+                Side.BUY, 600, 15995, broker.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0),
+                broker, shareholder, new AuctionMatcher());
+
+        assertThat(result.getTradableQuantity()).isEqualTo(600);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15000);
+        assertThat(result.getOpeningPrice()).isEqualTo(15995);
+        assertThat(security1.getLastTradedPrice()).isEqualTo(15000);
+        assertThat(security1.getOpeningPrice()).isEqualTo(15995);
+    }
 
 }
