@@ -37,17 +37,6 @@ public class AuctionMatcher extends Matcher{
         return MatchResult.executedAuction(trades, getLastTradedPriceAfterMatch(security),
                 tradableQuantity, security.getOpeningPrice());
     }
-    public MatchResult updateOpeningPrice(Security security) {
-        int newOpeningPrice = calculateOpeningPrice(security.getOrderBook());
-        return MatchResult.updateOpeningPrice(security.getLastTradedPrice(), newOpeningPrice,
-                calculateTradableQuantity(security.getOrderBook(), newOpeningPrice));
-    }
-    private int getLastTradedPriceAfterMatch(Security security) {
-        if(security.getOpeningPrice() != INVALID_PRICE)
-            return security.getOpeningPrice();
-        else
-            return security.getLastTradedPrice();
-    }
 
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
@@ -72,14 +61,16 @@ public class AuctionMatcher extends Matcher{
     }
 
     private boolean isAuctionOver(boolean isMatchingOver, Security security) {
-        return isMatchingOver || security.getOpeningPrice() == -1 || !security.getOrderBook().hasOrderOfType(Side.BUY)
+        return isMatchingOver || security.getOpeningPrice() == INVALID_PRICE || !security.getOrderBook().hasOrderOfType(Side.BUY)
                 || !security.getOrderBook().hasOrderOfType(Side.SELL);
     }
 
     public int calculateOpeningPrice(OrderBook orderBook) {
-        int maxTradebleQuantity = 0, newOpeningPrice = -1;
+        int maxTradebleQuantity = 0, newOpeningPrice = INVALID_PRICE;
         int lowestPrice = orderBook.getLowestPriorityOrderPrice(Side.BUY);
         int highestPrice = orderBook.getLowestPriorityOrderPrice(Side.SELL);
+        if (lowestPrice == INVALID_PRICE || highestPrice == INVALID_PRICE)
+            return INVALID_PRICE;
 
         for (int openingPrice = lowestPrice; openingPrice <= highestPrice; openingPrice++){
             int tradebleQuantity = calculateTradableQuantity(orderBook, openingPrice);
@@ -102,5 +93,16 @@ public class AuctionMatcher extends Matcher{
                 .sum();
 
         return Math.min(totalBuyQuantity, totalSellQuantity);
+    }
+    public MatchResult updateOpeningPrice(Security security) {
+        int newOpeningPrice = calculateOpeningPrice(security.getOrderBook());
+        return MatchResult.updateOpeningPrice(security.getLastTradedPrice(), newOpeningPrice,
+                calculateTradableQuantity(security.getOrderBook(), newOpeningPrice));
+    }
+    private int getLastTradedPriceAfterMatch(Security security) {
+        if(security.getOpeningPrice() != INVALID_PRICE)
+            return security.getOpeningPrice();
+        else
+            return security.getLastTradedPrice();
     }
 }

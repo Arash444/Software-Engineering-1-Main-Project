@@ -92,6 +92,8 @@ public class OrderBook {
                 .sum();
     }
     public int getLowestPriorityOrderPrice(Side side){
+        if(getQueue(side).isEmpty())
+            return INVALID_PRICE;
         return getQueue(side).getLast().getPrice();
     }
 
