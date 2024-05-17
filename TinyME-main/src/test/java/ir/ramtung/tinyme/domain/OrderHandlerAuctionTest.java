@@ -233,7 +233,7 @@ public class OrderHandlerAuctionTest {
         assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L + 600 * 15995);
     }
     @Test
-    void orderbook_has_iceberg_order_should_consider_total_quantity_not_display_quantity() {
+    void orderbook_has_iceberg_orders_should_consider_total_quantity_not_display_quantity() {
         orders = Arrays.asList(
                 new IcebergOrder(1, security, Side.SELL, 600, 15450, sellBroker, shareholder, 100, 0),
                 new Order(2, security, Side.SELL, 100, 15450, sellBroker, shareholder, 0),
@@ -248,5 +248,4 @@ public class OrderHandlerAuctionTest {
         verify(eventPublisher).publish(new OrderDeletedEvent(1, 7));
         verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 15450, 500));
     }
-
 }

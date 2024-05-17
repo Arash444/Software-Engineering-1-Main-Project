@@ -6,17 +6,17 @@ import ir.ramtung.tinyme.domain.service.MatcherStateHandler;
 import ir.ramtung.tinyme.domain.service.OrderHandler;
 import ir.ramtung.tinyme.messaging.EventPublisher;
 import ir.ramtung.tinyme.messaging.Message;
-import ir.ramtung.tinyme.messaging.event.MatchingStateRqRejectedEvent;
-import ir.ramtung.tinyme.messaging.event.OrderAcceptedEvent;
-import ir.ramtung.tinyme.messaging.event.SecurityStateChangedEvent;
-import ir.ramtung.tinyme.messaging.event.TradeEvent;
+import ir.ramtung.tinyme.messaging.TradeDTO;
+import ir.ramtung.tinyme.messaging.event.*;
 import ir.ramtung.tinyme.messaging.request.ChangingMatchingStateRq;
+import ir.ramtung.tinyme.messaging.request.DeleteOrderRq;
 import ir.ramtung.tinyme.messaging.request.MatchingState;
 import ir.ramtung.tinyme.repository.BrokerRepository;
 import ir.ramtung.tinyme.repository.SecurityRepository;
 import ir.ramtung.tinyme.repository.ShareholderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -28,6 +28,7 @@ import java.util.List;
 
 import static ir.ramtung.tinyme.domain.entity.Side.BUY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
@@ -84,19 +85,6 @@ public class MatchingStateHandlerTest {
         matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq("UNKNOWN", MatchingState.AUCTION));
         verify(eventPublisher).publish(new MatchingStateRqRejectedEvent("UNKNOWN", Collections.singletonList(Message.UNKNOWN_SECURITY_ISIN)));
     }
-
-    @Test
-    void change_continuous_to_continuous(){
-        security.setMatchingState(MatchingState.CONTINUOUS);
-        matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.CONTINUOUS));
-        verify(eventPublisher).publish(new SecurityStateChangedEvent(security.getIsin(), MatchingState.CONTINUOUS));
-    }
-    @Test
-    void change_continuous_to_auction(){
-        security.setMatchingState(MatchingState.CONTINUOUS);
-        matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.AUCTION));
-        verify(eventPublisher).publish(new SecurityStateChangedEvent(security.getIsin(), MatchingState.AUCTION));
-    }
     @Test
     void change_auction_to_continuous(){
         matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.CONTINUOUS));
@@ -106,6 +94,35 @@ public class MatchingStateHandlerTest {
     void change_auction_to_auction(){
         matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.AUCTION));
         verify(eventPublisher).publish(new SecurityStateChangedEvent(security.getIsin(), MatchingState.AUCTION));
+    }
+    @Test
+    void change_continuous_to_continuous_only_state_changed_event(){
+        orders = Arrays.asList(
+                new Order(1, security, BUY, 304, 15500, buyBroker, buyShareholder, 0),
+                new Order(2, security, Side.SELL, 65, 15500, sellBroker, sellShareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        security.setMatchingState(MatchingState.CONTINUOUS);
+
+        matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.CONTINUOUS));
+
+        InOrder inOrder = inOrder(eventPublisher);
+        inOrder.verify(eventPublisher).publish(new SecurityStateChangedEvent(security.getIsin(), MatchingState.CONTINUOUS));
+        inOrder.verifyNoMoreInteractions();
+    }
+    @Test
+    void change_continuous_to_auction_only_state_changed_event(){
+        orders = Arrays.asList(
+                new Order(1, security, BUY, 304, 15500, buyBroker, buyShareholder, 0),
+                new Order(2, security, Side.SELL, 65, 15500, sellBroker, sellShareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        security.setMatchingState(MatchingState.CONTINUOUS);
+        matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.AUCTION));
+
+        InOrder inOrder = inOrder(eventPublisher);
+        inOrder.verify(eventPublisher).publish(new SecurityStateChangedEvent(security.getIsin(), MatchingState.AUCTION));
+        inOrder.verifyNoMoreInteractions();
     }
     @Test
     void change_from_auction_open_auction_all_sell_queue_matches_check_trade_events() {
@@ -219,6 +236,65 @@ public class MatchingStateHandlerTest {
         assertThat(sellBroker.getCredit()).isEqualTo(10_000_000L + 15450 * 500);
         assertThat(sellShareholder.hasEnoughPositionsOn(security, 100_000 - 500)).isTrue();
         assertThat(buyShareholder.hasEnoughPositionsOn(security, 100_000 + 500)).isTrue();
+    }
+
+    @Test
+    void from_auction_to_auction_stop_limit_orders_activate_but_do_not_trade_check_events() {
+        StopLimitOrderbook stopLimitOrderBook = security.getStopLimitOrderBook();
+        orders = Arrays.asList(
+                new Order(1, security, BUY, 5, 15800, sellBroker, buyShareholder, 0),
+                new Order(2, security, Side.SELL, 10, 15800, buyBroker, sellShareholder, 0),
+                new Order(3, security, Side.SELL, 5, 15900, buyBroker, sellShareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        List<StopLimitOrder> stopLimitOrders = Arrays.asList(
+                new StopLimitOrder(4, security, BUY, 400, 15900, buyBroker, sellShareholder, 15500, 1),
+                new StopLimitOrder(5, security, BUY, 400, 15900, buyBroker, sellShareholder, 15900, 2)
+        );
+        stopLimitOrders.forEach(stopLimitOrderBook::enqueue);
+        security.setOpeningPrice(15800);
+
+        matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.AUCTION));
+
+        InOrder inOrder = inOrder(eventPublisher);
+        inOrder.verify(eventPublisher).publish(new SecurityStateChangedEvent(security.getIsin(), MatchingState.AUCTION));
+        inOrder.verify(eventPublisher).publish(new TradeEvent(new Trade(security, 15800, 5, orders.get(0), orders.get(1))));
+        inOrder.verify(eventPublisher).publish((new OrderActivatedEvent(1, 4)));
+        inOrder.verifyNoMoreInteractions();
+    }
+
+    @Test
+    void from_auction_to_auction_stop_limit_orders_activate_trade_and_activate_other_stop_limit_orders() {
+        StopLimitOrderbook stopLimitOrderBook = security.getStopLimitOrderBook();
+        orders = Arrays.asList(
+                new Order(1, security, BUY, 5, 15800, sellBroker, buyShareholder, 0),
+                new Order(2, security, Side.SELL, 10, 15800, buyBroker, sellShareholder, 0),
+                new Order(3, security, Side.SELL, 10, 15900, buyBroker, sellShareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        List<StopLimitOrder> stopLimitOrders = Arrays.asList(
+                new StopLimitOrder(4, security, BUY, 10, 15900, buyBroker, sellShareholder, 15500, 1),
+                new StopLimitOrder(5, security, BUY, 10, 15900, buyBroker, sellShareholder, 15900, 2)
+        );
+        stopLimitOrders.forEach(stopLimitOrderBook::enqueue);
+        security.setOpeningPrice(15800);
+
+        matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.CONTINUOUS));
+
+        InOrder inOrder = inOrder(eventPublisher);
+        inOrder.verify(eventPublisher).publish(new SecurityStateChangedEvent(security.getIsin(), MatchingState.CONTINUOUS));
+        inOrder.verify(eventPublisher).publish(new TradeEvent(new Trade(security, 15800, 5, orders.get(0), orders.get(1))));
+        inOrder.verify(eventPublisher).publish((new OrderActivatedEvent(1, 4)));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(1, 4,
+            List.of(new TradeDTO(
+                    new Trade(security, 15800, 5, orders.get(1).snapshotWithQuantity(5), stopLimitOrders.get(0).convertToOrder())),
+                    new TradeDTO(
+                    new Trade(security, 15900, 5, orders.get(2), stopLimitOrders.get(0).convertToOrder().snapshotWithQuantity(5))))));
+        inOrder.verify(eventPublisher).publish((new OrderActivatedEvent(2, 5)));
+        inOrder.verify(eventPublisher).publish(new OrderExecutedEvent(2, 5,
+                List.of(new TradeDTO(
+                    new Trade(security, 15900, 5, orders.get(2).snapshotWithQuantity(5), stopLimitOrders.get(1).convertToOrder())))));
+        inOrder.verifyNoMoreInteractions();
     }
 
 }
