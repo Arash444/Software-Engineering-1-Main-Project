@@ -3,7 +3,9 @@ package ir.ramtung.tinyme.domain.service;
 import ir.ramtung.tinyme.domain.entity.*;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 @Service
 public class AuctionMatcher extends Matcher{
@@ -46,7 +48,7 @@ public class AuctionMatcher extends Matcher{
 
         decreaseBuyBrokerCredit(order);
         order.getSecurity().getOrderBook().enqueue(order);
-        int newOpeningPrice = calculateOpeningPrice(order.getSecurity().getOrderBook());
+        int newOpeningPrice = calculateOpeningPrice(order.getSecurity().getOrderBook(), order.getSecurity().getLastTradedPrice());
         return MatchResult.queuedInAuction(order, order.getSecurity().getLastTradedPrice(),
                 calculateTradableQuantity(order.getSecurity().getOrderBook(),newOpeningPrice),
                 newOpeningPrice);
@@ -65,22 +67,47 @@ public class AuctionMatcher extends Matcher{
                 || !security.getOrderBook().hasOrderOfType(Side.SELL);
     }
 
-    public int calculateOpeningPrice(OrderBook orderBook) {
-        int maxTradebleQuantity = 0, newOpeningPrice = INVALID_PRICE;
+    public int calculateOpeningPrice(OrderBook orderBook, int lastTradedPrice) {
+        int maxTradeableQuantity = 0;
+        ArrayList<Integer> potentialPrices = new ArrayList<>();
         int lowestPrice = orderBook.getLowestPriorityOrderPrice(Side.BUY);
         int highestPrice = orderBook.getLowestPriorityOrderPrice(Side.SELL);
-        if (lowestPrice == INVALID_PRICE || highestPrice == INVALID_PRICE)
-            return INVALID_PRICE;
 
-        for (int openingPrice = lowestPrice; openingPrice <= highestPrice; openingPrice++){
-            int tradebleQuantity = calculateTradableQuantity(orderBook, openingPrice);
-            if(tradebleQuantity > maxTradebleQuantity) {
-                maxTradebleQuantity = tradebleQuantity;
-                newOpeningPrice = openingPrice;
+        if (lowestPrice == INVALID_PRICE || highestPrice == INVALID_PRICE) {
+            return INVALID_PRICE;
+        }
+        for (int openingPrice = lowestPrice; openingPrice <= highestPrice; openingPrice++) {
+            int tradeableQuantity = calculateTradableQuantity(orderBook, openingPrice);
+            if (tradeableQuantity >= maxTradeableQuantity) {
+                if (tradeableQuantity > maxTradeableQuantity) {
+                    maxTradeableQuantity = tradeableQuantity;
+                    potentialPrices.clear();
+                }
+                potentialPrices.add(openingPrice);
             }
         }
-        return newOpeningPrice;
+        if (potentialPrices.isEmpty()) {
+            return INVALID_PRICE;
+        }
+        return openingPriceClosestToLastTradedPrice(lastTradedPrice, potentialPrices);
     }
+
+    private int openingPriceClosestToLastTradedPrice(int lastTradedPrice, ArrayList<Integer> potentialPrices) {
+        int closestPrice = lastTradedPrice;
+        int minDifference = Integer.MAX_VALUE;
+        for (int price : potentialPrices) {
+            int difference = Math.abs(price - lastTradedPrice);
+            if (difference < minDifference) {
+                minDifference = difference;
+                closestPrice = price;
+            }
+            else if (difference == minDifference) {
+                closestPrice = lastTradedPrice;
+            }
+        }
+        return closestPrice;
+    }
+
     private int calculateTradableQuantity(OrderBook orderBook, int newOpeningPrice) {
         LinkedList<Order> matchingBuyOrders = orderBook.findAllMatchingOrdersWithPrice(newOpeningPrice, Side.BUY);
         LinkedList<Order> matchingSellOrders = orderBook.findAllMatchingOrdersWithPrice(newOpeningPrice, Side.SELL);
@@ -95,7 +122,7 @@ public class AuctionMatcher extends Matcher{
         return Math.min(totalBuyQuantity, totalSellQuantity);
     }
     public MatchResult updateOpeningPrice(Security security) {
-        int newOpeningPrice = calculateOpeningPrice(security.getOrderBook());
+        int newOpeningPrice = calculateOpeningPrice(security.getOrderBook(), security.getLastTradedPrice());
         return MatchResult.updateOpeningPrice(security.getLastTradedPrice(), newOpeningPrice,
                 calculateTradableQuantity(security.getOrderBook(), newOpeningPrice));
     }
