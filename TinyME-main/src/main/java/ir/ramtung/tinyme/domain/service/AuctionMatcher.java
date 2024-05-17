@@ -18,7 +18,7 @@ public class AuctionMatcher extends Matcher{
         LinkedList<Order> sellQueueCopy = new LinkedList<>(security.getOrderBook().getSellQueue());
         LinkedList<Trade> trades = new LinkedList<>();
 
-        while (!isAuctionOver(isMatchingOver, sellQueueCopy, security.getOrderBook())) {
+        while (!isAuctionOver(isMatchingOver, sellQueueCopy, security)) {
             Order sellOrder = sellQueueCopy.getFirst();
             while (security.getOrderBook().hasOrderOfType(sellOrder.getSide().opposite()) && sellOrder.getQuantity() > 0) {
                 Order buyOrder = security.getOrderBook().matchWithFirst(sellOrder.getSide(), security.getOpeningPrice());
@@ -35,7 +35,11 @@ public class AuctionMatcher extends Matcher{
         return MatchResult.executedAuction(trades, getLastTradedPriceAfterMatch(security),
                 tradableQuantity, security.getOpeningPrice());
     }
-
+    public MatchResult updateOpeningPrice(Security security) {
+        int newOpeningPrice = calculateOpeningPrice(security.getOrderBook());
+        return MatchResult.updateOpeningPrice(security.getLastTradedPrice(), newOpeningPrice,
+                calculateTradableQuantity(security.getOrderBook(), newOpeningPrice));
+    }
     private int getLastTradedPriceAfterMatch(Security security) {
         if(security.getOpeningPrice() != INVALID_PRICE)
             return security.getOpeningPrice();
@@ -64,9 +68,10 @@ public class AuctionMatcher extends Matcher{
         adjustShareholderPositions(trades);
     }
 
-    private boolean isAuctionOver(boolean isMatchingOver, LinkedList<Order> sellQueueCopy, OrderBook orderBook) {
-        return isMatchingOver || sellQueueCopy.isEmpty() ||
-                !orderBook.hasOrderOfType(Side.BUY) || !orderBook.hasOrderOfType(Side.SELL);
+    private boolean isAuctionOver(boolean isMatchingOver, LinkedList<Order> sellQueueCopy, Security security) {
+        return isMatchingOver || sellQueueCopy.isEmpty() || security.getOpeningPrice() == -1 ||
+                !security.getOrderBook().hasOrderOfType(Side.BUY)
+                || !security.getOrderBook().hasOrderOfType(Side.SELL);
     }
     @Override
     protected void removeSmallerOrder(OrderBook orderBook, Order sellOrder, Order buyOrder) {
@@ -102,11 +107,5 @@ public class AuctionMatcher extends Matcher{
                 .sum();
 
         return Math.min(totalBuyQuantity, totalSellQuantity);
-    }
-
-    public MatchResult updateOpeningPrice(Security security) {
-        int newOpeningPrice = calculateOpeningPrice(security.getOrderBook());
-        return MatchResult.updateOpeningPrice(security.getLastTradedPrice(), newOpeningPrice,
-                calculateTradableQuantity(security.getOrderBook(), newOpeningPrice));
     }
 }
