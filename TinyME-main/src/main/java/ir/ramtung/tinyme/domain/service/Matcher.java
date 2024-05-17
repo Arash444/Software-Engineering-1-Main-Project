@@ -14,7 +14,6 @@ public abstract class Matcher {
     protected abstract void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades, Order order1, Order order2, int tradeQuantity);
     protected void addNewTrade(int price, LinkedList<Trade> trades, Order newOrder, Order matchingOrder, int tradeQuantity) {
         Trade trade = new Trade(newOrder.getSecurity(), price, tradeQuantity, newOrder, matchingOrder);
-        trade.increaseSellersCredit();
         trades.add(trade);
     }
 
@@ -42,11 +41,13 @@ public abstract class Matcher {
         if (order.getSide() == Side.BUY)
             order.getBroker().decreaseCreditBy(order.getValue());
     }
-    protected void decreaseBuyBrokerCredit(Order order, Trade trade) {
+    protected void adjustBrokerCredit(Order order, Trade trade) {
+        trade.increaseSellersCredit();
         if (order.getSide() == Side.BUY)
             trade.decreaseBuyersCredit();
     }
-    protected void increaseBuyBrokerCredit(Order order, long creditChange) {
+    protected void adjustBrokerCredit(Order order, Trade trade, long creditChange) {
+        trade.increaseSellersCredit();
         if (order.getSide() == Side.BUY)
             order.getBroker().increaseCreditBy(creditChange);
     }

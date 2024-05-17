@@ -78,7 +78,7 @@ public class ContinuousMatcher extends Matcher {
     @Override
     protected void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades,
                                      Order matchingOrder, Order newOrder, int tradeQuantity) {
-        decreaseBuyBrokerCredit(newOrder, trades.getLast());
+        adjustBrokerCredit(newOrder, trades.getLast());
         decreaseOrderQuantity(newOrder, matchingOrder);
         removeSmallerOrder(orderBook, newOrder, matchingOrder);
     }
