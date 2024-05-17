@@ -170,7 +170,7 @@ public class OrderHandler {
     private List<String> auctionEnterOrderErrors(EnterOrderRq enterOrderRq) {
         List<String> errors = new LinkedList<>();
         if (enterOrderRq.getStopPrice() != 0)
-            errors.add(Message.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS);
+            errors.add(Message.STOP_LIMIT_ORDERS_CANNOT_INTERACT_WITH_AUCTIONS);
         if (enterOrderRq.getMinimumExecutionQuantity() != 0)
             errors.add(Message.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY);
         return errors;
@@ -190,7 +190,7 @@ public class OrderHandler {
             if (deleteOrder == null && stopLimitDeleteOrder == null)
                 errors.add(Message.ORDER_ID_NOT_FOUND);
             if (security.getMatchingState() == MatchingState.AUCTION && stopLimitDeleteOrder != null)
-                errors.add(Message.STOP_LIMIT_ORDERS_CANNOT_ENTER_AUCTIONS);
+                errors.add(Message.STOP_LIMIT_ORDERS_CANNOT_INTERACT_WITH_AUCTIONS);
         }
         if (!errors.isEmpty())
             throw new InvalidRequestException(errors);
