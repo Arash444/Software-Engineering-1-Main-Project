@@ -44,18 +44,10 @@ public class MatcherStateHandler {
         if(shouldOpenAuction(security.getMatchingState())) {
             matchResult = security.openAuction(auctionMatcher);
         }
-        security.setMatchingState(matchingStateRq.getTargetState());
         publishChangingMatchingStateRqEvents(matchingStateRq.getTargetState(), security, matchResult);
         activateStopLimitOrders(matchingStateRq.getTargetState(), security, security.getMatchingState());
         updateOpeningPrice(matchingStateRq.getTargetState(), security);
-    }
-
-    private MatchResult openAuction(Security security, MatchingState currentState) {
-        MatchResult matchResult = null;
-        if(shouldOpenAuction(currentState)) {
-            matchResult = security.openAuction(auctionMatcher);
-        }
-        return matchResult;
+        security.setMatchingState(matchingStateRq.getTargetState());
     }
 
     private void activateStopLimitOrders(MatchingState targetState, Security security, MatchingState currentState) {
