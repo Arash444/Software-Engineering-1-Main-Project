@@ -34,6 +34,7 @@ public class AuctionMatcher extends Matcher{
                     break;
             }
         }
+        adjustShareholderPositions(trades);
         return MatchResult.executedAuction(trades, getLastTradedPriceAfterMatch(security),
                 tradableQuantity, security.getOpeningPrice());
     }
@@ -57,7 +58,6 @@ public class AuctionMatcher extends Matcher{
         decreaseOrderQuantity(sellOrder, buyOrder);
         removeZeroQuantityOrder(orderBook, sellOrder, buyOrder);
         replenishIcebergOrder(orderBook, sellOrder, buyOrder);
-        adjustShareholderPositions(trades);
     }
 
     private boolean isAuctionOver(boolean isMatchingOver, Security security) {
