@@ -53,8 +53,9 @@ public class AuctionMatcherTest {
         security.setOpeningPrice(15600);
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade);
+        assertThat(security.getOrderBook().getBuyQueue()).hasSize(2);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(239);
-        assertThat(security.getOrderBook().getSellQueue().isEmpty()).isEqualTo(true);
+        assertThat(security.getOrderBook().getSellQueue().isEmpty()).isTrue();
     }
 
     @Test
@@ -70,6 +71,7 @@ public class AuctionMatcherTest {
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade);
         assertThat(security.getOrderBook().getBuyQueue().isEmpty()).isTrue();
+        assertThat(security.getOrderBook().getSellQueue()).hasSize(2);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(50);
     }
 
@@ -84,6 +86,8 @@ public class AuctionMatcherTest {
         orders.forEach(order -> orderBook.enqueue(order));
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades().isEmpty()).isTrue();
+        assertThat(security.getOrderBook().getSellQueue()).hasSize(2);
+        assertThat(security.getOrderBook().getBuyQueue()).hasSize(2);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(304);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(350);
     }
@@ -91,9 +95,9 @@ public class AuctionMatcherTest {
     @Test
     void open_auction_partial_match() {
         orders = Arrays.asList(
-                new Order(1, security, BUY, 300, 15700, broker, shareholder, 0),
+                new Order(1, security, BUY, 350, 15700, broker, shareholder, 0),
                 new Order(2, security, BUY, 43, 15500, broker, shareholder, 0),
-                new Order(3, security, Side.SELL, 350, 15600, broker, shareholder, 0),
+                new Order(3, security, Side.SELL, 300, 15600, broker, shareholder, 0),
                 new Order(4, security, Side.SELL, 100, 18600, broker, shareholder, 0)
         );
         orders.forEach(order -> orderBook.enqueue(order));
@@ -101,8 +105,10 @@ public class AuctionMatcherTest {
         security.setOpeningPrice(15600);
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade);
-        assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(43);
-        assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(50);
+        assertThat(security.getOrderBook().getSellQueue()).hasSize(1);
+        assertThat(security.getOrderBook().getBuyQueue()).hasSize(2);
+        assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(50);
+        assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(100);
     }
 
     @Test
@@ -245,5 +251,74 @@ public class AuctionMatcherTest {
         assertThat(security.getOrderBook().getSellQueue()).hasSize(1);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(20);
     }
+    @Test
+    void iceberg_sell_order_in_queue_matched_completely_after_three_rounds() {
+        orderBook = security.getOrderBook();
+        orders = Arrays.asList(
+                new IcebergOrder(1, security, Side.SELL, 450, 15450, broker, shareholder, 200, 0),
+                new Order(2, security, Side.SELL, 70, 15450, broker, shareholder, 0),
+                new Order(3, security, Side.SELL, 1000, 15500, broker, shareholder, 0),
+                new Order(4, security, BUY, 600, 15450, broker, shareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        security.setOpeningPrice(15450);
 
+        Trade trade1 = new Trade(security, 15450, 200, orders.get(0), orders.get(3));
+        Trade trade2 = new Trade(security, 15450, 70,
+                orders.get(1), orders.get(3).snapshotWithQuantity(400));
+        Trade trade3 = new Trade(security, 15450, 200,
+                orders.get(0).snapshotWithQuantity(200), orders.get(3).snapshotWithQuantity(330));
+        Trade trade4 = new Trade(security, 15450, 50,
+                orders.get(0).snapshotWithQuantity(50), orders.get(3).snapshotWithQuantity(130));
+
+
+        MatchResult result = auctionMatcher.match(security);
+
+        assertThat(result.trades()).containsExactly(trade1, trade2, trade3, trade4);
+        assertThat(security.getOrderBook().getSellQueue()).hasSize(1);
+        assertThat(security.getOrderBook().getBuyQueue()).hasSize(1);
+        assertThat(security.getOrderBook().getBuyQueue().get(0).getQuantity()).isEqualTo(80);
+        assertThat(security.getOrderBook().getSellQueue().get(0).getQuantity()).isEqualTo(1000);
+    }
+    @Test
+    void iceberg_sell_and_buy_order_with_remaining_sell_quantity_less_than_peak_size() {
+        orderBook = security.getOrderBook();
+        orders = Arrays.asList(
+                new IcebergOrder(1, security, Side.SELL, 600, 15450, broker, shareholder, 400, 0),
+                new Order(2, security, Side.SELL, 100, 15450, broker, shareholder, 0),
+                new Order(3, security, Side.SELL, 1000, 15500, broker, shareholder, 0),
+                new IcebergOrder(4, security, BUY, 400, 15450, broker, shareholder, 300, 0),
+                new Order(5, security, BUY, 100, 15450, broker, shareholder, 0),
+                new Order(6, security, BUY, 120 , 15400, broker, shareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        security.setOpeningPrice(15450);
+
+        Trade trade1 = new Trade(security, 15450, 300, orders.get(0), orders.get(3));
+        Trade trade2 = new Trade(security, 15450, 100, orders.get(0).snapshotWithQuantity(300), orders.get(4));
+        Trade trade3 = new Trade(security, 15450, 100,
+                orders.get(0).snapshotWithQuantity(200), orders.get(3).snapshotWithQuantity(100));
+
+        MatchResult result = auctionMatcher.match(security);
+
+        assertThat(result.trades()).containsExactly(trade1, trade2, trade3);
+        assertThat(security.getOrderBook().getSellQueue()).hasSize(3);
+        assertThat(security.getOrderBook().getBuyQueue()).hasSize(1);
+        assertThat(security.getOrderBook().getBuyQueue().get(0).getQuantity()).isEqualTo(120);
+        assertThat(security.getOrderBook().getSellQueue().get(0).getQuantity()).isEqualTo(100);
+    }
+    @Test
+    void open_auction_complete_match_two_orders() {
+        orders = Arrays.asList(
+                new Order(1, security, BUY, 300, 15500, broker, shareholder, 0),
+                new Order(2, security, Side.SELL, 300, 15500, broker, shareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        Trade trade = new Trade(security, 15500, 300, orders.get(0), orders.get(1));
+        security.setOpeningPrice(15500);
+        MatchResult result = auctionMatcher.match(security);
+        assertThat(result.trades()).containsExactly(trade);
+        assertThat(security.getOrderBook().getSellQueue()).hasSize(0);
+        assertThat(security.getOrderBook().getBuyQueue()).hasSize(0);
+    }
 }
