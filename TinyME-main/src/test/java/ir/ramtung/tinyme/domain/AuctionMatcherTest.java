@@ -168,17 +168,17 @@ public class AuctionMatcherTest {
                 new Order(6, security, Side.SELL, 100, 15600, broker, shareholder, 0)
         );
         orders.forEach(order -> orderBook.enqueue(order));
-        Trade trade1 = new Trade(security, 15600, 150, orders.get(0), orders.get(3));
-        Trade trade2 = new Trade(security, 15600, 50,
+        Trade trade1 = new Trade(security, 15500, 150, orders.get(0), orders.get(3));
+        Trade trade2 = new Trade(security, 15500, 50,
                 orders.get(0).snapshotWithQuantity(50), orders.get(4));
-        Trade trade3 = new Trade(security, 15600, 100,
+        Trade trade3 = new Trade(security, 15500, 100,
                 orders.get(1), orders.get(4).snapshotWithQuantity(150));
-        security.setOpeningPrice(15600); //ToDo check if it works
+        security.setOpeningPrice(15500);
         MatchResult result = auctionMatcher.match(security);
         assertThat(result.trades()).containsExactly(trade1, trade2, trade3);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getQuantity()).isEqualTo(50);
         assertThat(security.getOrderBook().getSellQueue().getFirst().getQuantity()).isEqualTo(50);
-        assertThat(result.getLastTradedPrice()).isEqualTo(15600);
+        assertThat(result.getLastTradedPrice()).isEqualTo(15500);
     }
 
     @Test

@@ -131,7 +131,7 @@ public class OrderHandlerAuctionTest {
                 Side.SELL, 300, 15450, sellBroker.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0));
         verify(eventPublisher).publish(new OrderAcceptedEvent(1, 1));
         verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), -1, 0));
-        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L);
+        assertThat(sellBroker.getCredit()).isEqualTo(10_000_000L);
     }
     @Test
     void new_buy_order_queued_single_order() {
@@ -143,10 +143,20 @@ public class OrderHandlerAuctionTest {
     }
     @Test
     void new_buy_order_rejected_not_enough_credit() {
-        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "ABC", 1, LocalDateTime.now(),
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq
+                (1, "ABC", 1, LocalDateTime.now(),
                 Side.BUY, 3000, 154500, buyBroker.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0));
         verify(eventPublisher).publish(new OrderRejectedEvent(1, 1, List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
         assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L);
+    }
+    @Test
+    void new_iceberg_buy_order_queued_single_order_same_as_normal_order() {
+        orderBook.enqueue(new Order (2, security, Side.SELL, 200, 15450, sellBroker, shareholder,0));
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1, "ABC", 1, LocalDateTime.now(),
+                Side.BUY, 300, 15450, buyBroker.getBrokerId(), shareholder.getShareholderId(), 100, 0, 0));
+        verify(eventPublisher).publish(new OrderAcceptedEvent(1, 1));
+        verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 15450, 200));
+        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L - 300 * 15450);
     }
     @Test
     void mixed_buy_sell_queue_add_new_order_opening_price_opening_price_is_last_traded_price() {
@@ -247,5 +257,22 @@ public class OrderHandlerAuctionTest {
         orderHandler.handleDeleteOrder(new DeleteOrderRq(1, security.getIsin(), BUY, 7));
         verify(eventPublisher).publish(new OrderDeletedEvent(1, 7));
         verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 15450, 500));
+        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L + 120 * 15400);
+    }
+    @Test
+    void mixed_buy_sell_queue_check_opening_price() {
+        orders = List.of(
+                new Order(1, security, BUY, 200, 15700, buyBroker, shareholder, 0),
+                new Order(2, security, BUY, 100, 15650, buyBroker, shareholder, 0),
+                new Order(3, security, BUY, 50, 15300, buyBroker, shareholder, 0),
+                new Order(4, security, Side.SELL, 150, 15200, sellBroker, shareholder, 0),
+                new Order(5, security, Side.SELL, 200, 15500, sellBroker, shareholder, 0),
+                new Order(6, security, Side.SELL, 100, 15600, sellBroker, shareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        orderHandler.handleEnterOrder(EnterOrderRq.createUpdateOrderRq(1, security.getIsin(), 3, LocalDateTime.now(),
+                Side.BUY, 100, 15400, buyBroker.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0));
+        verify(eventPublisher).publish(new OrderUpdatedEvent(1, 3));
+        verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 15500, 300));
     }
 }
