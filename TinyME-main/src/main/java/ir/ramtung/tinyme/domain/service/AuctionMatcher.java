@@ -99,9 +99,6 @@ public class AuctionMatcher extends Matcher{
                 minDifference = difference;
                 closestPrice = price;
             }
-            else if (difference == minDifference) {
-                closestPrice = lastTradedPrice;
-            }
         }
         return closestPrice;
     }
