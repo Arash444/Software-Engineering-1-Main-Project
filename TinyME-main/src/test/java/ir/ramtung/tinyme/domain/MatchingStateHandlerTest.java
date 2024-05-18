@@ -165,14 +165,14 @@ public class MatchingStateHandlerTest {
                 new Order(6, security, Side.SELL, 100, 15600, sellBroker, sellShareholder, 0)
         );
         orders.forEach(order -> orderBook.enqueue(order));
-        security.setOpeningPrice(15600); //ToDo check if it works
+        security.setOpeningPrice(15500);
         matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.CONTINUOUS));
 
         verify(eventPublisher).publish(new SecurityStateChangedEvent(security.getIsin(), MatchingState.CONTINUOUS));
-        verify(eventPublisher).publish(new TradeEvent(new Trade(security, 15600, 150, orders.get(0), orders.get(3))));
-        verify(eventPublisher).publish(new TradeEvent(new Trade(security, 15600, 50,
+        verify(eventPublisher).publish(new TradeEvent(new Trade(security, 15500, 150, orders.get(0), orders.get(3))));
+        verify(eventPublisher).publish(new TradeEvent(new Trade(security, 15500, 50,
                 orders.get(0).snapshotWithQuantity(50), orders.get(4))));
-        verify(eventPublisher).publish(new TradeEvent(new Trade(security, 15600, 100,
+        verify(eventPublisher).publish(new TradeEvent(new Trade(security, 15500, 100,
                 orders.get(1), orders.get(4).snapshotWithQuantity(150))));
     }
     @Test
@@ -186,11 +186,11 @@ public class MatchingStateHandlerTest {
                 new Order(6, security, Side.SELL, 100, 15600, sellBroker, sellShareholder, 0)
         );
         orders.forEach(order -> orderBook.enqueue(order));
-        security.setOpeningPrice(15600); //ToDo check if it works
+        security.setOpeningPrice(15500);
         matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.CONTINUOUS));
 
-        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L + 100 * 200 + 100 * 50 );
-        assertThat(sellBroker.getCredit()).isEqualTo(10_000_000L + 15600 * 300);
+        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L + 200 * 200 + 100 * 150 );
+        assertThat(sellBroker.getCredit()).isEqualTo(10_000_000L + 15500 * 300);
         assertThat(sellShareholder.hasEnoughPositionsOn(security, 100_000 - 300)).isTrue();
         assertThat(buyShareholder.hasEnoughPositionsOn(security, 100_000 + 300)).isTrue();
     }
@@ -265,7 +265,29 @@ public class MatchingStateHandlerTest {
         inOrder.verifyNoMoreInteractions();
     }
     @Test
-    void from_auction_to_auction_stop_limit_orders_activate_but_do_not_trade_check_credit_and_queue() {
+    void from_auction_to_auction_stop_limit_orders_activate_but_do_not_trade_check_credit() {
+        StopLimitOrderbook stopLimitOrderBook = security.getStopLimitOrderBook();
+        orders = Arrays.asList(
+                new Order(1, security, BUY, 5, 15800, buyBroker, buyShareholder, 0),
+                new Order(2, security, Side.SELL, 10, 15800, sellBroker, sellShareholder, 0),
+                new Order(3, security, Side.SELL, 5, 15900, sellBroker, sellShareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        List<StopLimitOrder> stopLimitOrders = Arrays.asList(
+                new StopLimitOrder(4, security, BUY, 10, 15900, buyBroker, sellShareholder, 15500, 1),
+                new StopLimitOrder(5, security, BUY, 10, 16000, buyBroker, sellShareholder, 15500, 2),
+                new StopLimitOrder(6, security, BUY, 400, 15900, buyBroker, sellShareholder, 15900, 2)
+        );
+        stopLimitOrders.forEach(stopLimitOrderBook::enqueue);
+        security.setOpeningPrice(15800);
+
+        matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.AUCTION));
+
+        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L);
+        assertThat(sellBroker.getCredit()).isEqualTo(10_000_000L + 5 * 15800);
+    }
+    @Test
+    void from_auction_to_auction_stop_limit_orders_activate_but_do_not_trade_check_queue() {
         StopLimitOrderbook stopLimitOrderBook = security.getStopLimitOrderBook();
         orders = Arrays.asList(
                 new Order(1, security, BUY, 5, 15800, buyBroker, buyShareholder, 0),
@@ -292,9 +314,6 @@ public class MatchingStateHandlerTest {
         assertThat(orderBook.getSellQueue().size()).isEqualTo(2);
         assertThat(orderBook.getSellQueue().getFirst().getOrderId()).isEqualTo(2);
         assertThat(orderBook.getSellQueue().getFirst().getQuantity()).isEqualTo(5);
-
-        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L);
-        assertThat(sellBroker.getCredit()).isEqualTo(10_000_000L + 5 * 15800);
     }
 
     @Test
@@ -331,7 +350,28 @@ public class MatchingStateHandlerTest {
         inOrder.verifyNoMoreInteractions();
     }
     @Test
-    void from_auction_to_auction_stop_limit_orders_activate_trade_and_activate_other_stop_limit_orders_check_credit_and_queue() {
+    void from_auction_to_auction_stop_limit_orders_activate_trade_and_activate_other_stop_limit_orders_check_credit() {
+        StopLimitOrderbook stopLimitOrderBook = security.getStopLimitOrderBook();
+        orders = Arrays.asList(
+                new Order(1, security, BUY, 5, 15800, buyBroker, buyShareholder, 0),
+                new Order(2, security, Side.SELL, 10, 15800, sellBroker, sellShareholder, 0),
+                new Order(3, security, Side.SELL, 10, 15900, sellBroker, sellShareholder, 0)
+        );
+        orders.forEach(order -> orderBook.enqueue(order));
+        List<StopLimitOrder> stopLimitOrders = Arrays.asList(
+                new StopLimitOrder(4, security, BUY, 10, 15900, buyBroker, sellShareholder, 15500, 1),
+                new StopLimitOrder(5, security, BUY, 15, 16100, buyBroker, sellShareholder, 15900, 2)
+        );
+        stopLimitOrders.forEach(stopLimitOrderBook::enqueue);
+        security.setOpeningPrice(15800);
+
+        matcherStateHandler.handleChangingMatchingStateRq(new ChangingMatchingStateRq(security.getIsin(), MatchingState.CONTINUOUS));
+
+        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L + 5 * 100 + 5 * 200);
+        assertThat(sellBroker.getCredit()).isEqualTo(10_000_000L + 10 * 15800 + 10 * 15900);
+    }
+    @Test
+    void from_auction_to_auction_stop_limit_orders_activate_trade_and_activate_other_stop_limit_orders_check_queue() {
         StopLimitOrderbook stopLimitOrderBook = security.getStopLimitOrderBook();
         orders = Arrays.asList(
                 new Order(1, security, BUY, 5, 15800, buyBroker, buyShareholder, 0),
@@ -352,8 +392,6 @@ public class MatchingStateHandlerTest {
         assertThat(orderBook.getBuyQueue().getFirst().getOrderId()).isEqualTo(5);
         assertThat(orderBook.getBuyQueue().getFirst().getQuantity()).isEqualTo(10);
         assertThat(orderBook.getSellQueue().size()).isEqualTo(0);
-        assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L + 5 * 100 + 5 * 200);
-        assertThat(sellBroker.getCredit()).isEqualTo(10_000_000L + 10 * 15800 + 10 * 15900);
     }
 
 }

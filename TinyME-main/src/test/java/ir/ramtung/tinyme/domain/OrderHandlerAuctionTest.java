@@ -13,6 +13,7 @@ import ir.ramtung.tinyme.repository.BrokerRepository;
 import ir.ramtung.tinyme.repository.SecurityRepository;
 import ir.ramtung.tinyme.repository.ShareholderRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -159,7 +160,7 @@ public class OrderHandlerAuctionTest {
         assertThat(buyBroker.getCredit()).isEqualTo(10_000_000L - 300 * 15450);
     }
     @Test
-    void mixed_buy_sell_queue_add_new_order_opening_price_opening_price_is_last_traded_price() {
+    void mixed_buy_sell_queue_add_new_order_potential_opening_price_has_last_traded_price() {
         orders = List.of(
                 new Order(1, security, BUY, 200, 15010, buyBroker, shareholder, 0),
                 new Order(2, security, Side.SELL, 200, 15010, sellBroker, shareholder, 0),
@@ -171,6 +172,26 @@ public class OrderHandlerAuctionTest {
         verify(eventPublisher).publish(new OrderAcceptedEvent(1, 4));
         verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 15000, 200));
 
+    }
+    @Test
+    @Disabled //ToDo find potential price range that doesn't have last traded price
+    void mixed_buy_sell_queue_add_new_order_potential_opening_price_does_not_have_last_traded_price_lowest_price_chosen() {
+        orders = List.of(
+                new Order(1, security, Side.BUY, 100, 14990, buyBroker, shareholder, 0),
+                new Order(2, security, Side.SELL, 100, 15010, sellBroker, shareholder, 0),
+                new Order(3, security, Side.SELL, 100, 14990, sellBroker, shareholder, 0)
+        );
+
+        orders.forEach(order -> orderBook.enqueue(order));
+
+        // Add a new buy order that does not create any new potential prices
+        orderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(
+                1, "ABC", 4, LocalDateTime.now(), Side.BUY, 100, 15010,
+                buyBroker.getBrokerId(), shareholder.getShareholderId(), 0, 0, 0
+        ));
+
+        verify(eventPublisher).publish(new OrderAcceptedEvent(1, 4));
+        verify(eventPublisher).publish(new OpeningPriceEvent(security.getIsin(), 14990, 100));
     }
     @Test
     void mixed_buy_sell_queue_add_new_order_opening_price_is_the_one_closer_to_last_traded_price() {
