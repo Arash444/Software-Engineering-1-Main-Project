@@ -67,7 +67,7 @@ public class AuctionMatcher extends Matcher{
                 || !security.getOrderBook().hasOrderOfType(Side.SELL);
     }
 
-    public int calculateOpeningPrice(OrderBook orderBook, int lastTradedPrice) {
+    private int calculateOpeningPrice(OrderBook orderBook, int lastTradedPrice) {
         int maxTradeableQuantity = 1;
         ArrayList<Integer> potentialPrices = new ArrayList<>();
         int lowestPrice = orderBook.getLowestPriorityOrderPrice(Side.BUY);
