@@ -49,18 +49,14 @@ public class StopLimitOrderbook extends OrderBook {
             updateMaxSellStopPrice();
     }
     private void updateMaxSellStopPrice() {
-        if (!getSellQueue().isEmpty()) {
-            StopLimitOrder stopLimitOrder = (StopLimitOrder) getSellQueue().getFirst();
-            maxSellStopPrice = stopLimitOrder.getStopPrice();
-        }
+        if (!getSellQueue().isEmpty())
+            maxSellStopPrice = ((StopLimitOrder) getSellQueue().getFirst()).getStopPrice();
         else
             maxSellStopPrice = 0;
     }
     private void updateMinBuyStopPrice() {
-        if (!getBuyQueue().isEmpty()) {
-            StopLimitOrder stopLimitOrder = (StopLimitOrder) getBuyQueue().getFirst();
-            minBuyStopPrice = stopLimitOrder.getStopPrice();
-        }
+        if (!getBuyQueue().isEmpty())
+            minBuyStopPrice = ((StopLimitOrder) getBuyQueue().getFirst()).getStopPrice();
         else
             minBuyStopPrice = Integer.MAX_VALUE;
     }
