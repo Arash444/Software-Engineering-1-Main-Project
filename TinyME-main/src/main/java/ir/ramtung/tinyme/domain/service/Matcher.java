@@ -15,6 +15,12 @@ public abstract class Matcher {
         Trade trade = new Trade(newOrder.getSecurity(), price, tradeQuantity, newOrder, matchingOrder);
         trades.add(trade);
     }
+    protected static boolean shareholderDoesNotHaveEnoughPosition(Order order) {
+        return order.getSide() == Side.SELL &&
+                !order.getShareholder().hasEnoughPositionsOn(order.getSecurity(),
+                        order.getSecurity().getOrderBook().totalSellQuantityByShareholder(order.getShareholder())
+                                + order.getQuantity());
+    }
 
     protected void decreaseOrderQuantity(Order order1, Order order2) {
         int minQuantity = Math.min(order1.getQuantity(), order2.getQuantity());

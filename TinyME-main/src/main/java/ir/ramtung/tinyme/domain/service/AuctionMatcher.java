@@ -43,6 +43,10 @@ public class AuctionMatcher extends Matcher{
 
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
+        int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
+        int previous_opening_price = order.getSecurity().getOpeningPrice();
+        if (shareholderDoesNotHaveEnoughPosition(order))
+            return MatchResult.notEnoughPositions(previous_last_traded_price, previous_opening_price);
         if (brokerDoesNotHaveEnoughCredit(order))
             return MatchResult.notEnoughCredit(order.getSecurity().getLastTradedPrice(), order.getSecurity().getOpeningPrice());
 
@@ -53,6 +57,7 @@ public class AuctionMatcher extends Matcher{
                 calculateTradableQuantity(order.getSecurity().getOrderBook(),newOpeningPrice),
                 newOpeningPrice);
     }
+
     @Override
     protected void matchTheTwoOrders(int openingPrice, OrderBook orderBook, LinkedList<Trade> trades, Order sellOrder, Order buyOrder, int tradeQuantity) {
         addNewTrade(openingPrice, trades, sellOrder, buyOrder, tradeQuantity);

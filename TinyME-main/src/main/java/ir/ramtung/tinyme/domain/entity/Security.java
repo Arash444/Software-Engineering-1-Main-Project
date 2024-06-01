@@ -36,10 +36,6 @@ public class Security {
     private int openingPrice = -1;
 
     public MatchResult newOrder(EnterOrderRq enterOrderRq, Broker broker, Shareholder shareholder, Matcher matcher) {
-        if (enterOrderRq.getSide() == Side.SELL &&
-                !shareholder.hasEnoughPositionsOn(this,
-                orderBook.totalSellQuantityByShareholder(shareholder) + enterOrderRq.getQuantity()))
-            return MatchResult.notEnoughPositions(lastTradedPrice, openingPrice);
         Order order;
         if (enterOrderRq.getPeakSize() != 0)
             order = new IcebergOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
@@ -82,10 +78,6 @@ public class Security {
     public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
         Order order = getOrderByID(updateOrderRq);
         validateUpdateOrderRequest(order, updateOrderRq);
-        if (updateOrderRq.getSide() == Side.SELL &&
-                !order.getShareholder().hasEnoughPositionsOn(this,
-                        orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
-            return MatchResult.notEnoughPositions(lastTradedPrice, openingPrice);
         boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
                 || updateOrderRq.getPrice() != order.getPrice()
                 || ((order instanceof IcebergOrder icebergOrder) && (icebergOrder.getPeakSize() < updateOrderRq.getPeakSize())
