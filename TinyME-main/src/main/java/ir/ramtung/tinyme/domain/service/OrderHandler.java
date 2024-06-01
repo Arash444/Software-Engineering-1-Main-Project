@@ -28,11 +28,12 @@ public class OrderHandler {
     ContinuousMatcher continuousMatcher;
     AuctionMatcher auctionMatcher;
     StopLimitOrderActivator stopLimitOrderActivator;
+    Validation validation;
 
     public OrderHandler(SecurityRepository securityRepository, BrokerRepository brokerRepository,
                         ShareholderRepository shareholderRepository, EventPublisher eventPublisher,
                         ContinuousMatcher continuousMatcher, AuctionMatcher auctionMatcher,
-                        StopLimitOrderActivator stopLimitOrderActivator) {
+                        StopLimitOrderActivator stopLimitOrderActivator, Validation validation) {
         this.securityRepository = securityRepository;
         this.brokerRepository = brokerRepository;
         this.shareholderRepository = shareholderRepository;
@@ -40,13 +41,14 @@ public class OrderHandler {
         this.continuousMatcher = continuousMatcher;
         this.auctionMatcher = auctionMatcher;
         this.stopLimitOrderActivator = stopLimitOrderActivator;
+        this.validation = validation;
     }
 
     public void handleEnterOrder(EnterOrderRq enterOrderRq) {
         long requestId = enterOrderRq.getRequestId();
         long orderId = enterOrderRq.getOrderId();
         try {
-            validateEnterOrderRq(enterOrderRq);
+            validation.validateEnterOrderRq(enterOrderRq, this);
 
             Security security = securityRepository.findSecurityByIsin(enterOrderRq.getSecurityIsin());
             Broker broker = brokerRepository.findBrokerById(enterOrderRq.getBrokerId());
@@ -127,53 +129,7 @@ public class OrderHandler {
         }
     }
 
-    private void validateEnterOrderRq(EnterOrderRq enterOrderRq) throws InvalidRequestException {
-        List<String> errors = new LinkedList<>();
-        if (enterOrderRq.getOrderId() <= 0)
-            errors.add(Message.INVALID_ORDER_ID);
-        if (enterOrderRq.getQuantity() <= 0)
-            errors.add(Message.ORDER_QUANTITY_NOT_POSITIVE);
-        if (enterOrderRq.getPrice() <= 0)
-            errors.add(Message.ORDER_PRICE_NOT_POSITIVE);
-        if (enterOrderRq.getMinimumExecutionQuantity() < 0)
-            errors.add(Message.ORDER_MIN_EXE_QUANTITY_NOT_POSITIVE);
-        if (enterOrderRq.getMinimumExecutionQuantity() > enterOrderRq.getQuantity())
-            errors.add(Message.ORDER_MIN_EXE_QUANTITY_MORE_THAN_TOTAL_QUANTITY);
-        if (enterOrderRq.getStopPrice() < 0)
-            errors.add(Message.ORDER_STOP_PRICE_NOT_POSITIVE);
-        if (enterOrderRq.getStopPrice() != 0 && enterOrderRq.getMinimumExecutionQuantity() != 0)
-            errors.add(Message.CANNOT_HAVE_BOTH_STOP_PRICE_AND_MIN_EXE_QUANTITY);
-        if (enterOrderRq.getStopPrice() != 0 && enterOrderRq.getPeakSize() != 0)
-            errors.add(Message.CANNOT_BE_ICEBERG_AND_STOP_LIMIT);
-        Security security = securityRepository.findSecurityByIsin(enterOrderRq.getSecurityIsin());
-        if (security == null)
-            errors.add(Message.UNKNOWN_SECURITY_ISIN);
-        else {
-            if (enterOrderRq.getQuantity() % security.getLotSize() != 0)
-                errors.add(Message.QUANTITY_NOT_MULTIPLE_OF_LOT_SIZE);
-            if (enterOrderRq.getPrice() % security.getTickSize() != 0)
-                errors.add(Message.PRICE_NOT_MULTIPLE_OF_TICK_SIZE);
-            if (security.getMatchingState() == MatchingState.AUCTION)
-                errors.addAll(auctionEnterOrderErrors(enterOrderRq));
-        }
-        if (brokerRepository.findBrokerById(enterOrderRq.getBrokerId()) == null)
-            errors.add(Message.UNKNOWN_BROKER_ID);
-        if (shareholderRepository.findShareholderById(enterOrderRq.getShareholderId()) == null)
-            errors.add(Message.UNKNOWN_SHAREHOLDER_ID);
-        if (enterOrderRq.getPeakSize() < 0 || enterOrderRq.getPeakSize() >= enterOrderRq.getQuantity())
-            errors.add(Message.INVALID_PEAK_SIZE);
-        if (!errors.isEmpty())
-            throw new InvalidRequestException(errors);
-    }
 
-    private List<String> auctionEnterOrderErrors(EnterOrderRq enterOrderRq) {
-        List<String> errors = new LinkedList<>();
-        if (enterOrderRq.getStopPrice() != 0)
-            errors.add(Message.STOP_LIMIT_ORDERS_CANNOT_INTERACT_WITH_AUCTIONS);
-        if (enterOrderRq.getMinimumExecutionQuantity() != 0)
-            errors.add(Message.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY);
-        return errors;
-    }
 
     private void validateDeleteOrderRq(DeleteOrderRq deleteOrderRq) throws InvalidRequestException {
         List<String> errors = new LinkedList<>();

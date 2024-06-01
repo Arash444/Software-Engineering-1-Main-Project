@@ -81,7 +81,7 @@ public class Security {
     }
     public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
         Order order = getOrderByID(updateOrderRq);
-        validateUpdateOrderRequest(order, updateOrderRq);
+        //validateUpdateOrderRequest(order, updateOrderRq);
         if (updateOrderRq.getSide() == Side.SELL &&
                 !order.getShareholder().hasEnoughPositionsOn(this,
                         orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity()))
@@ -126,35 +126,7 @@ public class Security {
         return matchResult;
     }
 
-    public void validateUpdateOrderRequest(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
-        if (order == null) {
-            throw new InvalidRequestException(Message.ORDER_ID_NOT_FOUND);
-        }
-        validateExecutionQuantity(order, updateOrderRq);
-        validateOrderType(order, updateOrderRq);
-        validateStopPrice(order, updateOrderRq);
-    }
 
-    private void validateExecutionQuantity(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
-        if (order.getMinimumExecutionQuantity() != updateOrderRq.getMinimumExecutionQuantity()) {
-            throw new InvalidRequestException(Message.CANNOT_CHANGE_MIN_EXE_QUANTITY);
-        }
-    }
-
-    private void validateOrderType(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
-        if (order instanceof IcebergOrder && updateOrderRq.getPeakSize() == 0) {
-            throw new InvalidRequestException(Message.INVALID_PEAK_SIZE);
-        }
-        if (!(order instanceof IcebergOrder) && updateOrderRq.getPeakSize() != 0) {
-            throw new InvalidRequestException(Message.CANNOT_SPECIFY_PEAK_SIZE_FOR_A_NON_ICEBERG_ORDER);
-        }
-    }
-
-    private void validateStopPrice(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
-        if (!(order instanceof StopLimitOrder) && updateOrderRq.getStopPrice() != 0) {
-            throw new InvalidRequestException(Message.CANNOT_CHANGE_STOP_PRICE);
-        }
-    }
     private void enqueueOrder(Order originalOrder){
         if(!originalOrder.canTrade())
             stopLimitOrderBook.enqueue(originalOrder);

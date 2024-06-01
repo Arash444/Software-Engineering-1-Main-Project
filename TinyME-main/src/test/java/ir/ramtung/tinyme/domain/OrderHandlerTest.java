@@ -123,7 +123,7 @@ public class OrderHandlerTest {
 
         EventPublisher mockEventPublisher = mock(EventPublisher.class, withSettings().verboseLogging());
         OrderHandler myOrderHandler = new OrderHandler(securityRepository, brokerRepository, shareholderRepository,
-                mockEventPublisher, new ContinuousMatcher(), new AuctionMatcher(), new StopLimitOrderActivator());
+                mockEventPublisher, new ContinuousMatcher(), new AuctionMatcher(), new StopLimitOrderActivator(), new Validation());
         myOrderHandler.handleEnterOrder(EnterOrderRq.createNewOrderRq(1,
                 incomingSellOrder.getSecurity().getIsin(),
                 incomingSellOrder.getOrderId(),
