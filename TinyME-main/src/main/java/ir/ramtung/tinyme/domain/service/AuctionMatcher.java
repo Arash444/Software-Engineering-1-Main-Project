@@ -43,6 +43,11 @@ public class AuctionMatcher extends Matcher{
 
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
+        if (order.getSide() == Side.SELL &&
+                !order.getShareholder().hasEnoughPositionsOn(order.getSecurity(),
+                        order.getSecurity().getOrderBook().
+                                totalSellQuantityByShareholder(order.getShareholder()) + order.getQuantity()))
+            return MatchResult.notEnoughPositions(order.getSecurity().getLastTradedPrice(), order.getSecurity().getOpeningPrice());
         if (brokerDoesNotHaveEnoughCredit(order))
             return MatchResult.notEnoughCredit(order.getSecurity().getLastTradedPrice(), order.getSecurity().getOpeningPrice());
 
