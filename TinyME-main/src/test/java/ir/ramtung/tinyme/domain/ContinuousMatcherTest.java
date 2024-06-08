@@ -130,7 +130,7 @@ public class ContinuousMatcherTest {
         );
 
         Order order = new IcebergOrder(1, security, BUY, 120 , 10, broker, shareholder, 30, 0);
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.EXECUTED);
         assertThat(result.trades()).hasSize(1);
@@ -144,7 +144,7 @@ public class ContinuousMatcherTest {
         Order order = new Order(11, security, Side.BUY, 2000, 15800,
                 broker, shareholder, 500);
         int initial_buy_queue =  security.getOrderBook().getBuyQueue().size();
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         int new_buy_queue = security.getOrderBook().getBuyQueue().size();
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
@@ -156,7 +156,7 @@ public class ContinuousMatcherTest {
         Order order = new Order(11, security, Side.SELL, 2000, 15700,
                 broker, shareholder, 500);
         int initial_sell_queue =  security.getOrderBook().getSellQueue().size();
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         int new_sell_queue = security.getOrderBook().getSellQueue().size();
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
@@ -169,7 +169,7 @@ public class ContinuousMatcherTest {
         Order order = new Order(11, security, Side.BUY, 2000, 15500,
                 broker, shareholder, 500);
         int initial_buy_queue =  security.getOrderBook().getBuyQueue().size();
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         int new_buy_queue = security.getOrderBook().getBuyQueue().size();
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
@@ -181,7 +181,7 @@ public class ContinuousMatcherTest {
         Order order = new Order(11, security, Side.SELL, 2000, 15900,
                 broker, shareholder, 500);
         int initial_sell_queue =  security.getOrderBook().getSellQueue().size();
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         int new_sell_queue = security.getOrderBook().getSellQueue().size();
 
         assertThat(result.outcome()).isEqualTo(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY);
@@ -195,7 +195,7 @@ public class ContinuousMatcherTest {
                 broker, shareholder, 100);
         Trade trade1 = new Trade(security, 15800, 350, orders.get(5), order);
         int initial_buy_queue =  security.getOrderBook().getBuyQueue().size();
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         int new_buy_queue = security.getOrderBook().getBuyQueue().size();
 
         assertThat(new_buy_queue).isEqualTo(initial_buy_queue + 1);
@@ -206,7 +206,7 @@ public class ContinuousMatcherTest {
     void new_stop_limit_order_has_not_been_activated() {
         StopLimitOrder order = new StopLimitOrder(11, security, Side.SELL, 2000, 15500,
                 broker, shareholder, 100,0);
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         assertThat(result.remainder()).isEqualTo(order);
         assertThat(result.trades()).isEmpty();
     }
@@ -217,7 +217,7 @@ public class ContinuousMatcherTest {
         Trade trade1 = new Trade(security, 15700, 304, orders.get(0), order.convertToOrder());
         Trade trade2 = new Trade(security, 15500, 43, orders.get(1),
                 order.convertToOrder().snapshotWithQuantity(196));
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         assertThat(result.remainder().getQuantity()).isEqualTo(153);
         assertThat(result.trades()).containsExactly(trade1, trade2);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getOrderId()).isEqualTo(3);
@@ -245,10 +245,10 @@ public class ContinuousMatcherTest {
                 broker, shareholder,mockedNow, 100,0);
         Order order = new Order(12, security, Side.SELL, 500, 15500, broker, shareholder,mockedNow, 0);
         Trade trade1 = new Trade(security, 15750, 100, stopLimitOrder.convertToOrder(), order);
-        continuousMatcher.execute(stopLimitOrder, false);
+        continuousMatcher.execute(stopLimitOrder);
         Trade trade2 = new Trade(security, 15700, 304, orders.get(0), order.snapshotWithQuantity(400));
         Trade trade3 = new Trade(security, 15500, 43, orders.get(1), order.snapshotWithQuantity(96));
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         assertThat(result.remainder().getQuantity()).isEqualTo(53);
         assertThat(result.trades()).containsExactly(trade1, trade2, trade3);
         assertThat(security.getOrderBook().getBuyQueue().getFirst().getOrderId()).isEqualTo(3);
@@ -256,26 +256,26 @@ public class ContinuousMatcherTest {
     @Test
     void new_buy_order_does_not_match_same_last_traded_price() {
         Order order = new Order(11, security, BUY, 2000, 15500, broker, shareholder, 0);
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         assertThat(result.getLastTradedPrice()).isEqualTo(security.getLastTradedPrice());
     }
     @Test
     void new_buy_order_rollbacks_last_trade_price() {
         Order order = new Order(11, security, Side.BUY, 2000, 15500,
                 broker, shareholder, 500);
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         assertThat(result.getLastTradedPrice()).isEqualTo(security.getLastTradedPrice());
     }
     @Test
     void new_buy_order_matches_partially_with_the_entire_sell_queue_only_last_traded_price() {
         Order order = new Order(11, security, BUY, 2000, 15850, broker, shareholder, 0);
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         assertThat(result.getLastTradedPrice()).isEqualTo(15820);
     }
     @Test
     void new_sell_order_matches_partially_with_the_entire_buy_queue_only_last_traded_price() {
         Order order = new Order(11, security, SELL, 3000, 15000, broker, shareholder, 0);
-        MatchResult result = continuousMatcher.execute(order, false);
+        MatchResult result = continuousMatcher.execute(order);
         assertThat(result.getLastTradedPrice()).isEqualTo(15400);
     }
 

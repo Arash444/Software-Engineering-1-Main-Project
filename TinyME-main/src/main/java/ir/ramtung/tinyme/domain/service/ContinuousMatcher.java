@@ -40,7 +40,7 @@ public class ContinuousMatcher extends Matcher {
         return MatchResult.executedContinuous(newOrder, trades, lastTradedPrice, hasActivatedOrder);
     }
     @Override
-    public MatchResult execute(Order order, Boolean isAmendOrder) {
+    public MatchResult execute(Order order) {
         int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
         int previous_opening_price = order.getSecurity().getOpeningPrice();
         if (!order.canTrade()) {

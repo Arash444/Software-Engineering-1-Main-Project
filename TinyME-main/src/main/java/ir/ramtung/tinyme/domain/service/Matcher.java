@@ -8,7 +8,7 @@ import java.util.LinkedList;
 @Service
 public abstract class Matcher {
 
-    public abstract MatchResult execute(Order order, Boolean isAmendOrder);
+    public abstract MatchResult execute(Order order);
     public abstract MatchResult match(Security security, Order order);
     protected abstract void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades, Order order1, Order order2, int tradeQuantity);
     protected void addNewTrade(int price, LinkedList<Trade> trades, Order newOrder, Order matchingOrder, int tradeQuantity) {

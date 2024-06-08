@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
 
 @Service
 public class AuctionMatcher extends Matcher{
@@ -42,7 +41,7 @@ public class AuctionMatcher extends Matcher{
     }
 
     @Override
-    public MatchResult execute(Order order, Boolean isAmendOrder) {
+    public MatchResult execute(Order order) {
         int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
         int previous_opening_price = order.getSecurity().getOpeningPrice();
         if (shareholderDoesNotHaveEnoughPosition(order))

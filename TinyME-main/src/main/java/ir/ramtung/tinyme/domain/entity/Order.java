@@ -124,4 +124,12 @@ public class Order {
         else
             return this.price <= price;
     }
+
+    public void makeMinimumExecutionQuantityZero() {
+        minimumExecutionQuantity = 0;
+    }
+
+    public void returnToOriginalMinimumExecutionQuantity(int originalMinimumExecutionQuantity) {
+        minimumExecutionQuantity = originalMinimumExecutionQuantity;
+    }
 }

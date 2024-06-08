@@ -1,11 +1,9 @@
 package ir.ramtung.tinyme.domain.entity;
 
 import ir.ramtung.tinyme.domain.service.AuctionMatcher;
-import ir.ramtung.tinyme.messaging.exception.InvalidRequestException;
 import ir.ramtung.tinyme.messaging.request.DeleteOrderRq;
 import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
 import ir.ramtung.tinyme.domain.service.Matcher;
-import ir.ramtung.tinyme.messaging.Message;
 import ir.ramtung.tinyme.messaging.request.MatchingState;
 import lombok.Builder;
 import lombok.Getter;
@@ -38,7 +36,7 @@ public class Security {
     public MatchResult newOrder(EnterOrderRq enterOrderRq, Broker broker, Shareholder shareholder, Matcher matcher) {
         Order order = createNewOrder(enterOrderRq, broker, shareholder);
 
-        MatchResult matchResult = matcher.execute(order, false);
+        MatchResult matchResult = matcher.execute(order);
         updateSecurityPrices(matchResult);
         return matchResult;
     }
@@ -71,7 +69,7 @@ public class Security {
     public MatchResult activateOrder(StopLimitOrder originalOrder, StopLimitOrder order, Matcher matcher){
         preprocessStopLimitOrder(order, originalOrder);
         Order newOrder = order.convertToOrder();
-        MatchResult matchResult = matcher.execute(newOrder, false);
+        MatchResult matchResult = matcher.execute(newOrder);
         if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
             rollbackStopLimitOrder(originalOrder);
         }
@@ -99,42 +97,46 @@ public class Security {
         else
             order.markAsNew();
 
-        removeOrderByID(updateOrderRq,order);
-        MatchResult matchResult = matcher.execute(order, true);
-        processOrder(updateOrderRq, originalOrder, matchResult);
+        preprocessOrder(updateOrderRq, order);
+        MatchResult matchResult = matcher.execute(order);
+        processOrder(order, originalOrder, matchResult);
         updateSecurityPrices(matchResult);
         return matchResult;
     }
 
-    private static void decreaseBuyBrokerCredit(EnterOrderRq updateOrderRq, Order order) {
+    private void preprocessOrder(EnterOrderRq updateOrderRq, Order order) {
+        removeOrderByID(updateOrderRq, order);
+        order.makeMinimumExecutionQuantityZero();
+    }
+
+    private void decreaseBuyBrokerCredit(EnterOrderRq updateOrderRq, Order order) {
         if (updateOrderRq.getSide() == Side.BUY) {
             order.getBroker().decreaseCreditBy(order.getValue());
         }
     }
 
-    private static void increaseBuyBrokerCredit(EnterOrderRq updateOrderRq, Order order, Order originalOrder) {
+    private void increaseBuyBrokerCredit(EnterOrderRq updateOrderRq, Order order, Order originalOrder) {
         if (updateOrderRq.getSide() == Side.BUY) {
             order.getBroker().increaseCreditBy(originalOrder.getValue());
         }
     }
 
-    private void processOrder(EnterOrderRq updateOrderRq, Order originalOrder, MatchResult matchResult) {
+    private void processOrder(Order order, Order originalOrder, MatchResult matchResult) {
         if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
             enqueueOrder(originalOrder);
-            if (updateOrderRq.getSide() == Side.BUY) {
+            if (order.getSide() == Side.BUY) {
                 originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
             }
         }
+        order.returnToOriginalMinimumExecutionQuantity(originalOrder.getMinimumExecutionQuantity());
     }
 
-    private static boolean LosesPriority(EnterOrderRq updateOrderRq, Order order) {
-        boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
+    private boolean LosesPriority(EnterOrderRq updateOrderRq, Order order) {
+        return order.isQuantityIncreased(updateOrderRq.getQuantity())
                 || updateOrderRq.getPrice() != order.getPrice()
                 || ((order instanceof IcebergOrder icebergOrder) && (icebergOrder.getPeakSize() < updateOrderRq.getPeakSize())
                 || !order.canTrade());
-        return losesPriority;
     }
-
 
     private void enqueueOrder(Order originalOrder){
         if(!originalOrder.canTrade())
