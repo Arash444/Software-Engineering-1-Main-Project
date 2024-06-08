@@ -26,23 +26,25 @@ public class OrderHandler {
     BrokerRepository brokerRepository;
     ShareholderRepository shareholderRepository;
     EventPublisher eventPublisher;
+    OrderEventPublisher orderEventPublisher;
     ContinuousMatcher continuousMatcher;
     AuctionMatcher auctionMatcher;
     StopLimitOrderActivator stopLimitOrderActivator;
     Validation validation;
 
     public OrderHandler(SecurityRepository securityRepository, BrokerRepository brokerRepository,
-                        ShareholderRepository shareholderRepository, EventPublisher eventPublisher,
+                        ShareholderRepository shareholderRepository, OrderEventPublisher orderEventPublisher,
                         ContinuousMatcher continuousMatcher, AuctionMatcher auctionMatcher,
-                        StopLimitOrderActivator stopLimitOrderActivator, Validation validation) {
+                        StopLimitOrderActivator stopLimitOrderActivator, Validation validation, EventPublisher eventPublisher) {
         this.securityRepository = securityRepository;
         this.brokerRepository = brokerRepository;
         this.shareholderRepository = shareholderRepository;
-        this.eventPublisher = eventPublisher;
+        this.orderEventPublisher = orderEventPublisher;
         this.continuousMatcher = continuousMatcher;
         this.auctionMatcher = auctionMatcher;
         this.stopLimitOrderActivator = stopLimitOrderActivator;
         this.validation = validation;
+        this.eventPublisher = eventPublisher;
     }
 
     public void handleEnterOrder(EnterOrderRq enterOrderRq) {
@@ -51,63 +53,23 @@ public class OrderHandler {
         Shareholder shareholder = shareholderRepository.findShareholderById(enterOrderRq.getShareholderId());
         try {
             validation.validateEnterOrderRq(enterOrderRq, security, broker, shareholder);
-
         } catch (InvalidRequestException ex) {
-            eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), ex.getReasons()));
+            orderEventPublisher.publishErrors(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), ex.getReasons());
             return;
         }
         MatchResult matchResult;
         matchResult = getMatchResult(enterOrderRq, security, broker, shareholder);
-        publishEvents(enterOrderRq, security, matchResult);
-    }
-
-    private void publishEvents(EnterOrderRq enterOrderRq, Security security, MatchResult matchResult) {
-        publishRejectedEvents(enterOrderRq, matchResult);
-        publishAcceptedEvents(enterOrderRq);
-        publishActivatedEvents(enterOrderRq, matchResult);
-        publishExecutedEvents(enterOrderRq, security, matchResult);
-        publishOpeningPriceEvent(security, matchResult);
-    }
-
-    private void publishActivatedEvents(EnterOrderRq enterOrderRq, MatchResult matchResult) {
-        if (matchResult.hasOrderBeenActivated())
-            eventPublisher.publish(new OrderActivatedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
-    }
-
-    private void publishOpeningPriceEvent(Security security, MatchResult matchResult) {
-        if (security.getMatchingState() == MatchingState.AUCTION)
-            eventPublisher.publish(new OpeningPriceEvent(security.getIsin(), matchResult.getOpeningPrice(),
-                    matchResult.getTradableQuantity()));
-    }
-
-    private void publishExecutedEvents(EnterOrderRq enterOrderRq, Security security, MatchResult matchResult) {
+        orderEventPublisher.publishEvents(enterOrderRq, security, matchResult);
         if (!matchResult.trades().isEmpty()) {
-            eventPublisher.publish(new OrderExecutedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
-                    matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
-            stopLimitOrderActivator.handleStopLimitOrderActivation(security, continuousMatcher, eventPublisher);
+            activateStopLimitOrders(security);
         }
     }
 
-    private void publishAcceptedEvents(EnterOrderRq enterOrderRq) {
-        if (enterOrderRq.getRequestType() == OrderEntryType.NEW_ORDER)
-            eventPublisher.publish(new OrderAcceptedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
+    private void activateStopLimitOrders(Security security) {
+        if (security.getMatchingState() == MatchingState.AUCTION)
+            stopLimitOrderActivator.handleStopLimitOrderActivation(security, auctionMatcher, eventPublisher);
         else
-            eventPublisher.publish(new OrderUpdatedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
-    }
-
-    private void publishRejectedEvents(EnterOrderRq enterOrderRq, MatchResult matchResult) {
-        if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
-            eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
-                    List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
-        }
-        else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
-            eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
-                    List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
-        }
-        else if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY) {
-            eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
-                    List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
-        }
+            stopLimitOrderActivator.handleStopLimitOrderActivation(security, continuousMatcher, eventPublisher);
     }
 
     private MatchResult getMatchResult(EnterOrderRq enterOrderRq, Security security, Broker broker, Shareholder shareholder) {
@@ -150,11 +112,9 @@ public class OrderHandler {
             }
 
         } catch (InvalidRequestException ex) {
-            eventPublisher.publish(new OrderRejectedEvent(deleteOrderRq.getRequestId(), deleteOrderRq.getOrderId(), ex.getReasons()));
+            orderEventPublisher.publishErrors(deleteOrderRq.getRequestId(), deleteOrderRq.getOrderId(), ex.getReasons());
         }
     }
-
-
 
     private void validateDeleteOrderRq(DeleteOrderRq deleteOrderRq) throws InvalidRequestException {
         List<String> errors = new LinkedList<>();
