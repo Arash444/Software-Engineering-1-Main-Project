@@ -1,6 +1,8 @@
 package ir.ramtung.tinyme.domain.service;
 
 import ir.ramtung.tinyme.domain.entity.*;
+import ir.ramtung.tinyme.domain.service.control.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedList;
@@ -9,6 +11,8 @@ import java.util.ListIterator;
 
 @Service
 public class ContinuousMatcher extends Matcher {
+    @Autowired
+    private MatchingControlList controls;
     private boolean hasActivatedOrder = false;
     @Override
     public MatchResult match(Security security, Order order){
@@ -26,7 +30,7 @@ public class ContinuousMatcher extends Matcher {
             int tradeQuantity = Math.min(newOrder.getQuantity(), matchingOrder.getQuantity());
             addNewTrade(matchingOrder.getPrice(), trades, newOrder, matchingOrder, tradeQuantity);
             if (newOrder.getSide() == Side.BUY && !trades.getLast().buyerHasEnoughCredit()){
-                rollbackTradesBuy(newOrder, trades);
+                rollbackTrades(newOrder, trades);
                 return MatchResult.notEnoughCredit(previousLastTradedPrice, -1);
             }
             lastTradedPrice = matchingOrder.getPrice();
@@ -39,8 +43,6 @@ public class ContinuousMatcher extends Matcher {
     public MatchResult execute(Order order, Boolean isAmendOrder) {
         int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
         int previous_opening_price = order.getSecurity().getOpeningPrice();
-        if (shareholderDoesNotHaveEnoughPosition(order))
-            return MatchResult.notEnoughPositions(previous_last_traded_price, previous_opening_price);
         if (!order.canTrade()) {
             StopLimitOrder stopLimitOrder = (StopLimitOrder) order;
             if(!stopLimitOrder.hasReachedStopPrice(previous_last_traded_price))
@@ -50,31 +52,30 @@ public class ContinuousMatcher extends Matcher {
                 hasActivatedOrder = true;
             }
         }
+        MatchingOutcome outcome = controls.canStartMatching(order);
+        if (outcome != MatchingOutcome.EXECUTED)
+            return new MatchResult(outcome, order, new LinkedList<>(), previous_last_traded_price,
+                    false, 0, previous_opening_price);
+
+        controls.matchingStarted(order);
 
         MatchResult result = match(order);
-        if (result.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT)
+        if (result.outcome() != MatchingOutcome.EXECUTED)
             return result;
-        int total_traded_quantity = result.trades().stream().mapToInt(Trade::getQuantity).sum();
-        if (result.remainder().getQuantity() > 0 && (total_traded_quantity >= order.getMinimumExecutionQuantity()
-                || isAmendOrder)) {
-            if (order.getSide() == Side.BUY) {
-                if (!order.getBroker().hasEnoughCredit(order.getValue())) {
-                    rollbackTradesBuy(order, result.trades());
-                    return MatchResult.notEnoughCredit(previous_last_traded_price, -1);
-                }
-                order.getBroker().decreaseCreditBy(order.getValue());
-            }
+
+        outcome = controls.canAcceptMatching(order, result);
+        if (outcome != MatchingOutcome.EXECUTED) {
+            controls.rollbackTrades(order, result.trades());
+            rollbackTrades(order, result.trades());
+            return new MatchResult(outcome, order, new LinkedList<>(), previous_last_traded_price,
+                    false, 0, previous_opening_price);
+        }
+
+        if (result.remainder().getQuantity() > 0) {
             order.getSecurity().getOrderBook().enqueue(result.remainder());
         }
 
-        else if (total_traded_quantity < order.getMinimumExecutionQuantity()) {
-            if (order.getSide() == Side.BUY)
-                rollbackTradesBuy(order, result.trades());
-            else if (order.getSide() == Side.SELL)
-                rollbackTradesSell(order, result.trades());
-            return MatchResult.notEnoughTradedQuantity(previous_last_traded_price);
-        }
-        adjustShareholderPositions(result.trades());
+        controls.matchingAccepted(order, result);
         return result;
     }
 
@@ -86,25 +87,13 @@ public class ContinuousMatcher extends Matcher {
         removeZeroQuantityOrder(orderBook, matchingOrder);
         replenishIcebergOrder(orderBook, matchingOrder);
     }
-
-    private void rollbackTradesBuy(Order newOrder, LinkedList<Trade> trades) {
-        assert newOrder.getSide() == Side.BUY;
-        newOrder.getBroker().increaseCreditBy(trades.stream().mapToLong(Trade::getTradedValue).sum());
-        trades.forEach(trade -> trade.getSell().getBroker().decreaseCreditBy(trade.getTradedValue()));
-
+    private void rollbackTrades(Order newOrder, LinkedList<Trade> trades) {
         ListIterator<Trade> it = trades.listIterator(trades.size());
         while (it.hasPrevious()) {
-            newOrder.getSecurity().getOrderBook().restoreSellOrder(it.previous().getSell());
-        }
-    }
-
-    private void rollbackTradesSell(Order newOrder, LinkedList<Trade> trades) {
-        assert newOrder.getSide() == Side.SELL;
-        newOrder.getBroker().decreaseCreditBy(trades.stream().mapToLong(Trade::getTradedValue).sum());
-
-        ListIterator<Trade> it = trades.listIterator(trades.size());
-        while (it.hasPrevious()) {
-            newOrder.getSecurity().getOrderBook().restoreBuyOrder(it.previous().getBuy());
+            if (newOrder.getSide() == Side.BUY)
+                newOrder.getSecurity().getOrderBook().restoreSellOrder(it.previous().getSell());
+            else
+                newOrder.getSecurity().getOrderBook().restoreBuyOrder(it.previous().getBuy());
         }
     }
     private MatchResult handleNonActivatedOrder(StopLimitOrder stopLimitOrder, int previous_last_traded_price) {

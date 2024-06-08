@@ -44,7 +44,7 @@ public final class MatchResult {
         return new MatchResult(MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY, null, new LinkedList<>(),
                 lastTradedPrice, false, 0, -1);
     }
-    private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades,
+    public MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades,
                         int lastTradedPrice, boolean hasActivatedOrder, int tradableQuantity, int openingPrice) {
         this.outcome = outcome;
         this.remainder = remainder;
