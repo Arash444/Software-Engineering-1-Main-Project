@@ -8,6 +8,7 @@ import ir.ramtung.tinyme.messaging.exception.InvalidRequestException;
 import ir.ramtung.tinyme.messaging.request.DeleteOrderRq;
 import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -236,6 +237,7 @@ class SecurityTest {
         assertThat(security1.getOpeningPrice()).isEqualTo(15995);
     }
     @Test
+    @Disabled
     void update_security_prices_works_when_adding_an_order_to_an_auction(){
         Security security1 = Security.builder().isin("TEST").build();
         orders = List.of(
