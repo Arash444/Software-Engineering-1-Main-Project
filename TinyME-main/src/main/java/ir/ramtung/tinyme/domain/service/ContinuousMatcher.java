@@ -38,11 +38,9 @@ public class ContinuousMatcher extends Matcher {
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
         int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
-        if (order.getSide() == Side.SELL &&
-                !order.getShareholder().hasEnoughPositionsOn(order.getSecurity(),
-                        order.getSecurity().getOrderBook().
-                                totalSellQuantityByShareholder(order.getShareholder()) + order.getQuantity()))
-            return MatchResult.notEnoughPositions(previous_last_traded_price, -1);
+        int previous_opening_price = order.getSecurity().getOpeningPrice();
+        if (shareholderDoesNotHaveEnoughPosition(order))
+            return MatchResult.notEnoughPositions(previous_last_traded_price, previous_opening_price);
         if (!order.canTrade()) {
             StopLimitOrder stopLimitOrder = (StopLimitOrder) order;
             if(!stopLimitOrder.hasReachedStopPrice(previous_last_traded_price))

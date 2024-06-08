@@ -43,11 +43,10 @@ public class AuctionMatcher extends Matcher{
 
     @Override
     public MatchResult execute(Order order, Boolean isAmendOrder) {
-        if (order.getSide() == Side.SELL &&
-                !order.getShareholder().hasEnoughPositionsOn(order.getSecurity(),
-                        order.getSecurity().getOrderBook().
-                                totalSellQuantityByShareholder(order.getShareholder()) + order.getQuantity()))
-            return MatchResult.notEnoughPositions(order.getSecurity().getLastTradedPrice(), order.getSecurity().getOpeningPrice());
+        int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
+        int previous_opening_price = order.getSecurity().getOpeningPrice();
+        if (shareholderDoesNotHaveEnoughPosition(order))
+            return MatchResult.notEnoughPositions(previous_last_traded_price, previous_opening_price);
         if (brokerDoesNotHaveEnoughCredit(order))
             return MatchResult.notEnoughCredit(order.getSecurity().getLastTradedPrice(), order.getSecurity().getOpeningPrice());
 
@@ -58,6 +57,7 @@ public class AuctionMatcher extends Matcher{
                 calculateTradableQuantity(order.getSecurity().getOrderBook(),newOpeningPrice),
                 newOpeningPrice);
     }
+
     @Override
     protected void matchTheTwoOrders(int openingPrice, OrderBook orderBook, LinkedList<Trade> trades, Order sellOrder, Order buyOrder, int tradeQuantity) {
         addNewTrade(openingPrice, trades, sellOrder, buyOrder, tradeQuantity);
@@ -72,7 +72,7 @@ public class AuctionMatcher extends Matcher{
                 || !security.getOrderBook().hasOrderOfType(Side.SELL);
     }
 
-    public int calculateOpeningPrice(OrderBook orderBook, int lastTradedPrice) {
+    private int calculateOpeningPrice(OrderBook orderBook, int lastTradedPrice) {
         int maxTradeableQuantity = 1;
         ArrayList<Integer> potentialPrices = new ArrayList<>();
         int lowestPrice = orderBook.getLowestPriorityOrderPrice(Side.BUY);
