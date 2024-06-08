@@ -1,6 +1,7 @@
 package ir.ramtung.tinyme.domain.service;
 
 import ir.ramtung.tinyme.domain.entity.*;
+import ir.ramtung.tinyme.messaging.request.MatchingState;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -44,8 +45,8 @@ public class AuctionMatcher extends Matcher{
     public MatchResult execute(Order order) {
         int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
         int previous_opening_price = order.getSecurity().getOpeningPrice();
-        
-        MatchingOutcome outcome = controls.canStartMatching(order);
+
+        MatchingOutcome outcome = controls.canStartMatching(order, order.getSecurity().getMatchingState());
         if (outcome != MatchingOutcome.EXECUTED)
             return new MatchResult(outcome, order, new LinkedList<>(), previous_last_traded_price,
                     false, 0, previous_opening_price);

@@ -18,12 +18,6 @@ public abstract class Matcher {
         Trade trade = new Trade(newOrder.getSecurity(), price, tradeQuantity, newOrder, matchingOrder);
         trades.add(trade);
     }
-    protected static boolean shareholderDoesNotHaveEnoughPosition(Order order) {
-        return order.getSide() == Side.SELL &&
-                !order.getShareholder().hasEnoughPositionsOn(order.getSecurity(),
-                        order.getSecurity().getOrderBook().totalSellQuantityByShareholder(order.getShareholder())
-                                + order.getQuantity());
-    }
 
     protected void decreaseOrderQuantity(Order order1, Order order2) {
         int minQuantity = Math.min(order1.getQuantity(), order2.getQuantity());
@@ -46,17 +40,9 @@ public abstract class Matcher {
             }
         }
     }
-    protected boolean brokerDoesNotHaveEnoughCredit(Order order) {
-        return order.getSide() == Side.BUY && !order.getBroker().hasEnoughCredit(order.getValue());
-    }
     protected void decreaseBuyBrokerCredit(Order order) {
         if (order.getSide() == Side.BUY)
             order.getBroker().decreaseCreditBy(order.getValue());
-    }
-    protected void adjustBrokerCredit(Order order, Trade trade) {
-        trade.increaseSellersCredit();
-        if (order.getSide() == Side.BUY)
-            trade.decreaseBuyersCredit();
     }
     protected void adjustBrokerCredit(Order order, Trade trade, long creditChange) {
         trade.increaseSellersCredit();

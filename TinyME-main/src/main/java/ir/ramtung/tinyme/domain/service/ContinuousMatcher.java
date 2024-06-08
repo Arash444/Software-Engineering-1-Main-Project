@@ -19,18 +19,20 @@ public class ContinuousMatcher extends Matcher {
     public MatchResult match(Order newOrder) {
         OrderBook orderBook = newOrder.getSecurity().getOrderBook();
         LinkedList<Trade> trades = new LinkedList<>();
-        int previousLastTradedPrice = newOrder.getSecurity().getLastTradedPrice();
-        int lastTradedPrice = previousLastTradedPrice;
+        int lastTradedPrice = newOrder.getSecurity().getLastTradedPrice();
         while (orderBook.hasOrderOfType(newOrder.getSide().opposite()) && newOrder.getQuantity() > 0) {
             Order matchingOrder = orderBook.matchWithFirst(newOrder);
             if (matchingOrder == null)
                 break;
-            int tradeQuantity = Math.min(newOrder.getQuantity(), matchingOrder.getQuantity());
-            addNewTrade(matchingOrder.getPrice(), trades, newOrder, matchingOrder, tradeQuantity);
-            if (newOrder.getSide() == Side.BUY && !trades.getLast().buyerHasEnoughCredit()){
+            Trade trade = new Trade(newOrder.getSecurity(), matchingOrder.getPrice(),
+                    Math.min(newOrder.getQuantity(), matchingOrder.getQuantity()), newOrder, matchingOrder);
+            MatchingOutcome outcome = controls.canTrade(newOrder, trade);
+            if (outcome != MatchingOutcome.EXECUTED) {
                 rollbackTrades(newOrder, trades);
-                return MatchResult.notEnoughCredit(previousLastTradedPrice, -1);
+                return new MatchResult(outcome, newOrder, new LinkedList<>(), newOrder.getSecurity().getLastTradedPrice(),
+                        false, 0, newOrder.getSecurity().getOpeningPrice());
             }
+            trades.add(trade);
             lastTradedPrice = matchingOrder.getPrice();
             matchTheTwoOrders(-1, orderBook, trades,
                     matchingOrder, newOrder, -1);
@@ -50,7 +52,7 @@ public class ContinuousMatcher extends Matcher {
                 hasActivatedOrder = true;
             }
         }
-        MatchingOutcome outcome = controls.canStartMatching(order);
+        MatchingOutcome outcome = controls.canStartMatching(order, order.getSecurity().getMatchingState());
         if (outcome != MatchingOutcome.EXECUTED)
             return new MatchResult(outcome, order, new LinkedList<>(), previous_last_traded_price,
                     false, 0, previous_opening_price);
@@ -80,7 +82,7 @@ public class ContinuousMatcher extends Matcher {
     @Override
     protected void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades,
                                      Order matchingOrder, Order newOrder, int tradeQuantity) {
-        adjustBrokerCredit(newOrder, trades.getLast());
+        controls.tradeAccepted(newOrder, trades.getLast());
         decreaseOrderQuantity(newOrder, matchingOrder);
         removeZeroQuantityOrder(orderBook, matchingOrder);
         replenishIcebergOrder(orderBook, matchingOrder);

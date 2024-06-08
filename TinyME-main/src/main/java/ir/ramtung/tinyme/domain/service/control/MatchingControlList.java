@@ -4,6 +4,7 @@ import ir.ramtung.tinyme.domain.entity.MatchResult;
 import ir.ramtung.tinyme.domain.entity.MatchingOutcome;
 import ir.ramtung.tinyme.domain.entity.Order;
 import ir.ramtung.tinyme.domain.entity.Trade;
+import ir.ramtung.tinyme.messaging.request.MatchingState;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -15,9 +16,9 @@ public class MatchingControlList {
     @Autowired
     private List<MatchingControl> controlList;
 
-    public MatchingOutcome canStartMatching(Order order) {
+    public MatchingOutcome canStartMatching(Order order, MatchingState matchingState) {
         for (MatchingControl control : controlList) {
-            MatchingOutcome outcome = control.canStartMatching(order);
+            MatchingOutcome outcome = control.canStartMatching(order, matchingState);
             if (outcome != MatchingOutcome.EXECUTED)
                 return outcome;
         }

@@ -1,11 +1,12 @@
 package ir.ramtung.tinyme.domain.service.control;
 
 import ir.ramtung.tinyme.domain.entity.*;
+import ir.ramtung.tinyme.messaging.request.MatchingState;
 import org.springframework.stereotype.Component;
 
 @Component
 public class OwnershipControl implements MatchingControl {
-    public MatchingOutcome canStartMatching(Order order) {
+    public MatchingOutcome canStartMatching(Order order, MatchingState matchingState) {
         if (shareholderDoesNotHaveEnoughPosition(order))
             return MatchingOutcome.NOT_ENOUGH_POSITIONS;
         return MatchingOutcome.EXECUTED;
