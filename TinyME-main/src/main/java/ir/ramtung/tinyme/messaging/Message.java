@@ -20,6 +20,8 @@ public class Message {
     public static final String NOT_ENOUGH_TRADED_QUANTITY = "Not enough traded quantity";
     public static final String ORDER_STOP_PRICE_NOT_POSITIVE = "Order stop price is not positive";
     public static final String CANNOT_CHANGE_STOP_PRICE = "Cannot change stop price";
+    public static final String CANNOT_HAVE_BOTH_PEAK_SIZE_AND_MIN_EXE_QUANTITY = "Cannot have both a peak size " +
+            "and a minimum execution Quantity";
     public static final String CANNOT_HAVE_BOTH_STOP_PRICE_AND_MIN_EXE_QUANTITY = "Cannot have both a stop price " +
             "and a minimum execution Quantity";
     public static final String CANNOT_BE_ICEBERG_AND_STOP_LIMIT = "Cannot be both an iceberg and a stop limit order";
