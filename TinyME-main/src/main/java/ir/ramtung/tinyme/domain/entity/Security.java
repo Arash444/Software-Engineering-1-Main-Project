@@ -78,7 +78,7 @@ public class Security {
         updateSecurityPrices(matchResult);
         return matchResult;
     }
-    public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
+    public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) {
         Order order = getOrderByID(updateOrderRq);
         boolean losesPriority = LosesPriority(updateOrderRq, order);
 
