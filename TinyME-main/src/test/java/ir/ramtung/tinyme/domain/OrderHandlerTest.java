@@ -3,6 +3,7 @@ package ir.ramtung.tinyme.domain;
 import ir.ramtung.tinyme.config.MockedJMSTestConfig;
 import ir.ramtung.tinyme.domain.entity.*;
 import ir.ramtung.tinyme.domain.service.*;
+import ir.ramtung.tinyme.domain.service.validation.Validation;
 import ir.ramtung.tinyme.messaging.EventPublisher;
 import ir.ramtung.tinyme.messaging.Message;
 import ir.ramtung.tinyme.messaging.TradeDTO;

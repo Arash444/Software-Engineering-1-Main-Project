@@ -1,6 +1,7 @@
 package ir.ramtung.tinyme.domain.service;
 
 import ir.ramtung.tinyme.domain.entity.*;
+import ir.ramtung.tinyme.domain.service.validation.Validation;
 import ir.ramtung.tinyme.messaging.Message;
 import ir.ramtung.tinyme.messaging.exception.InvalidRequestException;
 import ir.ramtung.tinyme.messaging.EventPublisher;
@@ -45,14 +46,12 @@ public class OrderHandler {
     }
 
     public void handleEnterOrder(EnterOrderRq enterOrderRq) {
-        long requestId = enterOrderRq.getRequestId();
-        long orderId = enterOrderRq.getOrderId();
+        Security security = securityRepository.findSecurityByIsin(enterOrderRq.getSecurityIsin());
+        Broker broker = brokerRepository.findBrokerById(enterOrderRq.getBrokerId());
+        Shareholder shareholder = shareholderRepository.findShareholderById(enterOrderRq.getShareholderId());
         try {
-            validation.validateEnterOrderRq(enterOrderRq, this);
+            validation.validateEnterOrderRq(enterOrderRq, security, broker, shareholder);
 
-            Security security = securityRepository.findSecurityByIsin(enterOrderRq.getSecurityIsin());
-            Broker broker = brokerRepository.findBrokerById(enterOrderRq.getBrokerId());
-            Shareholder shareholder = shareholderRepository.findShareholderById(enterOrderRq.getShareholderId());
             MatchResult matchResult;
             if (enterOrderRq.getRequestType() == OrderEntryType.NEW_ORDER) 
                 matchResult = enterNewOrder(enterOrderRq, security, broker, shareholder, security.getMatchingState());
@@ -60,28 +59,28 @@ public class OrderHandler {
                 matchResult = enterUpdateOrder(enterOrderRq, security, security.getMatchingState());
 
             if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_CREDIT) {
-                eventPublisher.publish(new OrderRejectedEvent(requestId, orderId,
+                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
                         List.of(Message.BUYER_HAS_NOT_ENOUGH_CREDIT)));
                 return;
             }
             if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_POSITIONS) {
-                eventPublisher.publish(new OrderRejectedEvent(requestId, orderId,
+                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
                         List.of(Message.SELLER_HAS_NOT_ENOUGH_POSITIONS)));
                 return;
             }
             if (matchResult.outcome() == MatchingOutcome.NOT_ENOUGH_TRADED_QUANTITY) {
-                eventPublisher.publish(new OrderRejectedEvent(requestId, orderId,
+                eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
                         List.of(Message.NOT_ENOUGH_TRADED_QUANTITY)));
                 return;
             }
             if (enterOrderRq.getRequestType() == OrderEntryType.NEW_ORDER)
-                eventPublisher.publish(new OrderAcceptedEvent(requestId, orderId));
+                eventPublisher.publish(new OrderAcceptedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
             else
-                eventPublisher.publish(new OrderUpdatedEvent(requestId, orderId));
+                eventPublisher.publish(new OrderUpdatedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
             if (matchResult.hasOrderBeenActivated())
-                eventPublisher.publish(new OrderActivatedEvent(requestId, orderId));
+                eventPublisher.publish(new OrderActivatedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId()));
             if (!matchResult.trades().isEmpty()) {
-                eventPublisher.publish(new OrderExecutedEvent(requestId, orderId,
+                eventPublisher.publish(new OrderExecutedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(),
                         matchResult.trades().stream().map(TradeDTO::new).collect(Collectors.toList())));
                 stopLimitOrderActivator.handleStopLimitOrderActivation(security, continuousMatcher, eventPublisher);
             }
@@ -90,7 +89,7 @@ public class OrderHandler {
                         matchResult.getTradableQuantity()));
 
         } catch (InvalidRequestException ex) {
-            eventPublisher.publish(new OrderRejectedEvent(requestId, orderId, ex.getReasons()));
+            eventPublisher.publish(new OrderRejectedEvent(enterOrderRq.getRequestId(), enterOrderRq.getOrderId(), ex.getReasons()));
         }
     }
 
