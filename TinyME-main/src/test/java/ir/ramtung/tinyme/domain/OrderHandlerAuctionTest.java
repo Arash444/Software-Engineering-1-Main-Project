@@ -116,7 +116,8 @@ public class OrderHandlerAuctionTest {
                 Message.CANNOT_HAVE_BOTH_STOP_PRICE_AND_MIN_EXE_QUANTITY,
                 Message.CANNOT_BE_ICEBERG_AND_STOP_LIMIT,
                 Message.STOP_LIMIT_ORDERS_CANNOT_INTERACT_WITH_AUCTIONS,
-                Message.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY
+                Message.ORDERS_IN_AUCTION_CANNOT_HAVE_MIN_EXE_QUANTITY,
+                Message.ORDER_ID_NOT_FOUND
         );
     }
     @Test

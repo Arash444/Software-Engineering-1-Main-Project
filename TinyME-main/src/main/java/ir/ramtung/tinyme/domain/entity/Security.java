@@ -36,24 +36,27 @@ public class Security {
     private int openingPrice = -1;
 
     public MatchResult newOrder(EnterOrderRq enterOrderRq, Broker broker, Shareholder shareholder, Matcher matcher) {
-        Order order;
-        if (enterOrderRq.getPeakSize() != 0)
-            order = new IcebergOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
-                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder,
-                    enterOrderRq.getEntryTime(), enterOrderRq.getPeakSize(), enterOrderRq.getMinimumExecutionQuantity());
-        else if (enterOrderRq.getStopPrice() != 0) {
-            order = new StopLimitOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
-                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
-                    enterOrderRq.getStopPrice(), enterOrderRq.getRequestId());
-        }
-        else
-            order = new Order(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
-                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
-                    enterOrderRq.getMinimumExecutionQuantity());
+        Order order = createNewOrder(enterOrderRq, broker, shareholder);
 
         MatchResult matchResult = matcher.execute(order, false);
         updateSecurityPrices(matchResult);
         return matchResult;
+    }
+
+    private Order createNewOrder(EnterOrderRq enterOrderRq, Broker broker, Shareholder shareholder) {
+        if (enterOrderRq.getPeakSize() != 0)
+            return new IcebergOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
+                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder,
+                    enterOrderRq.getEntryTime(), enterOrderRq.getPeakSize(), enterOrderRq.getMinimumExecutionQuantity());
+        else if (enterOrderRq.getStopPrice() != 0) {
+            return new StopLimitOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
+                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
+                    enterOrderRq.getStopPrice(), enterOrderRq.getRequestId());
+        }
+        else
+            return new Order(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
+                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
+                    enterOrderRq.getMinimumExecutionQuantity());
     }
 
     public void deleteOrder(DeleteOrderRq deleteOrderRq) {
@@ -77,7 +80,6 @@ public class Security {
     }
     public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
         Order order = getOrderByID(updateOrderRq);
-        validateUpdateOrderRequest(order, updateOrderRq);
         boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
                 || updateOrderRq.getPrice() != order.getPrice()
                 || ((order instanceof IcebergOrder icebergOrder) && (icebergOrder.getPeakSize() < updateOrderRq.getPeakSize())
@@ -118,35 +120,7 @@ public class Security {
         return matchResult;
     }
 
-    public void validateUpdateOrderRequest(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
-        if (order == null) {
-            throw new InvalidRequestException(Message.ORDER_ID_NOT_FOUND);
-        }
-        validateExecutionQuantity(order, updateOrderRq);
-        validateOrderType(order, updateOrderRq);
-        validateStopPrice(order, updateOrderRq);
-    }
 
-    private void validateExecutionQuantity(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
-        if (order.getMinimumExecutionQuantity() != updateOrderRq.getMinimumExecutionQuantity()) {
-            throw new InvalidRequestException(Message.CANNOT_CHANGE_MIN_EXE_QUANTITY);
-        }
-    }
-
-    private void validateOrderType(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
-        if (order instanceof IcebergOrder && updateOrderRq.getPeakSize() == 0) {
-            throw new InvalidRequestException(Message.INVALID_PEAK_SIZE);
-        }
-        if (!(order instanceof IcebergOrder) && updateOrderRq.getPeakSize() != 0) {
-            throw new InvalidRequestException(Message.CANNOT_SPECIFY_PEAK_SIZE_FOR_A_NON_ICEBERG_ORDER);
-        }
-    }
-
-    private void validateStopPrice(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
-        if (!(order instanceof StopLimitOrder) && updateOrderRq.getStopPrice() != 0) {
-            throw new InvalidRequestException(Message.CANNOT_CHANGE_STOP_PRICE);
-        }
-    }
     private void enqueueOrder(Order originalOrder){
         if(!originalOrder.canTrade())
             stopLimitOrderBook.enqueue(originalOrder);
