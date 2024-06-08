@@ -1,13 +1,16 @@
 package ir.ramtung.tinyme.domain.service;
 
 import ir.ramtung.tinyme.domain.entity.*;
+import ir.ramtung.tinyme.domain.service.control.MatchingControlList;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedList;
 
 @Service
 public abstract class Matcher {
-
+    @Autowired
+    protected MatchingControlList controls;
     public abstract MatchResult execute(Order order);
     public abstract MatchResult match(Security security, Order order);
     protected abstract void matchTheTwoOrders(int price, OrderBook orderBook, LinkedList<Trade> trades, Order order1, Order order2, int tradeQuantity);

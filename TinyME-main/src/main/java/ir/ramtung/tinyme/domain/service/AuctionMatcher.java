@@ -44,10 +44,11 @@ public class AuctionMatcher extends Matcher{
     public MatchResult execute(Order order) {
         int previous_last_traded_price = order.getSecurity().getLastTradedPrice();
         int previous_opening_price = order.getSecurity().getOpeningPrice();
-        if (shareholderDoesNotHaveEnoughPosition(order))
-            return MatchResult.notEnoughPositions(previous_last_traded_price, previous_opening_price);
-        if (brokerDoesNotHaveEnoughCredit(order))
-            return MatchResult.notEnoughCredit(order.getSecurity().getLastTradedPrice(), order.getSecurity().getOpeningPrice());
+        
+        MatchingOutcome outcome = controls.canStartMatching(order);
+        if (outcome != MatchingOutcome.EXECUTED)
+            return new MatchResult(outcome, order, new LinkedList<>(), previous_last_traded_price,
+                    false, 0, previous_opening_price);
 
         decreaseBuyBrokerCredit(order);
         order.getSecurity().getOrderBook().enqueue(order);

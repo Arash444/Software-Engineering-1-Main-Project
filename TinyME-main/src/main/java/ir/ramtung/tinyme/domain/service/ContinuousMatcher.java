@@ -11,8 +11,6 @@ import java.util.ListIterator;
 
 @Service
 public class ContinuousMatcher extends Matcher {
-    @Autowired
-    private MatchingControlList controls;
     private boolean hasActivatedOrder = false;
     @Override
     public MatchResult match(Security security, Order order){
