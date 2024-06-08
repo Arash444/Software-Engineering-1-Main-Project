@@ -80,10 +80,7 @@ public class Security {
     }
     public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
         Order order = getOrderByID(updateOrderRq);
-        boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
-                || updateOrderRq.getPrice() != order.getPrice()
-                || ((order instanceof IcebergOrder icebergOrder) && (icebergOrder.getPeakSize() < updateOrderRq.getPeakSize())
-                || !order.canTrade());
+        boolean losesPriority = LosesPriority(updateOrderRq, order);
 
         Order originalOrder = order.snapshot();
         order.updateFromRequest(updateOrderRq);
@@ -94,13 +91,9 @@ public class Security {
                 return activateOrder((StopLimitOrder) originalOrder, stopLimitOrder, matcher);
             }
         }
-        if (updateOrderRq.getSide() == Side.BUY) {
-            order.getBroker().increaseCreditBy(originalOrder.getValue());
-        }
+        increaseBuyBrokerCredit(updateOrderRq, order, originalOrder);
         if (!losesPriority) {
-            if (updateOrderRq.getSide() == Side.BUY) {
-                order.getBroker().decreaseCreditBy(order.getValue());
-            }
+            decreaseBuyBrokerCredit(updateOrderRq, order);
             return MatchResult.executedContinuous(null, List.of(), lastTradedPrice, false);
         }
         else
@@ -108,16 +101,38 @@ public class Security {
 
         removeOrderByID(updateOrderRq,order);
         MatchResult matchResult = matcher.execute(order, true);
+        processOrder(updateOrderRq, originalOrder, matchResult);
+        updateSecurityPrices(matchResult);
+        return matchResult;
+    }
 
+    private static void decreaseBuyBrokerCredit(EnterOrderRq updateOrderRq, Order order) {
+        if (updateOrderRq.getSide() == Side.BUY) {
+            order.getBroker().decreaseCreditBy(order.getValue());
+        }
+    }
+
+    private static void increaseBuyBrokerCredit(EnterOrderRq updateOrderRq, Order order, Order originalOrder) {
+        if (updateOrderRq.getSide() == Side.BUY) {
+            order.getBroker().increaseCreditBy(originalOrder.getValue());
+        }
+    }
+
+    private void processOrder(EnterOrderRq updateOrderRq, Order originalOrder, MatchResult matchResult) {
         if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
             enqueueOrder(originalOrder);
             if (updateOrderRq.getSide() == Side.BUY) {
                 originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
             }
         }
+    }
 
-        updateSecurityPrices(matchResult);
-        return matchResult;
+    private static boolean LosesPriority(EnterOrderRq updateOrderRq, Order order) {
+        boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
+                || updateOrderRq.getPrice() != order.getPrice()
+                || ((order instanceof IcebergOrder icebergOrder) && (icebergOrder.getPeakSize() < updateOrderRq.getPeakSize())
+                || !order.canTrade());
+        return losesPriority;
     }
 
 
