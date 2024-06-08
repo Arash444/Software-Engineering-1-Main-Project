@@ -36,28 +36,27 @@ public class Security {
     private int openingPrice = -1;
 
     public MatchResult newOrder(EnterOrderRq enterOrderRq, Broker broker, Shareholder shareholder, Matcher matcher) {
-        if (enterOrderRq.getSide() == Side.SELL &&
-                !shareholder.hasEnoughPositionsOn(this,
-                orderBook.totalSellQuantityByShareholder(shareholder) + enterOrderRq.getQuantity()))
-            return MatchResult.notEnoughPositions(lastTradedPrice, openingPrice);
-        Order order;
-        if (enterOrderRq.getPeakSize() != 0)
-            order = new IcebergOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
-                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder,
-                    enterOrderRq.getEntryTime(), enterOrderRq.getPeakSize(), enterOrderRq.getMinimumExecutionQuantity());
-        else if (enterOrderRq.getStopPrice() != 0) {
-            order = new StopLimitOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
-                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
-                    enterOrderRq.getStopPrice(), enterOrderRq.getRequestId());
-        }
-        else
-            order = new Order(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
-                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
-                    enterOrderRq.getMinimumExecutionQuantity());
+        Order order = createNewOrder(enterOrderRq, broker, shareholder);
 
         MatchResult matchResult = matcher.execute(order, false);
         updateSecurityPrices(matchResult);
         return matchResult;
+    }
+
+    private Order createNewOrder(EnterOrderRq enterOrderRq, Broker broker, Shareholder shareholder) {
+        if (enterOrderRq.getPeakSize() != 0)
+            return new IcebergOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
+                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder,
+                    enterOrderRq.getEntryTime(), enterOrderRq.getPeakSize(), enterOrderRq.getMinimumExecutionQuantity());
+        else if (enterOrderRq.getStopPrice() != 0) {
+            return new StopLimitOrder(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
+                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
+                    enterOrderRq.getStopPrice(), enterOrderRq.getRequestId());
+        }
+        else
+            return new Order(enterOrderRq.getOrderId(), this, enterOrderRq.getSide(),
+                    enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder, enterOrderRq.getEntryTime(),
+                    enterOrderRq.getMinimumExecutionQuantity());
     }
 
     public void deleteOrder(DeleteOrderRq deleteOrderRq) {
